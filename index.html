@@ -47,8 +47,8 @@
     --navy-line: #e6dcc6;
     --navy-line-soft: #efe7d6;
     --ink: #33291a;
-    --ink-dim: #8a7a5c;
-    --ink-dimmer: #b3a583;
+    --ink-dim: #6b5a3d;
+    --ink-dimmer: #9c8b6a;
     --crab: #ff6b52;
     --crab-deep: #c94326;
     --crab-glow: #ff9478;
@@ -170,36 +170,66 @@
 
   /* ---------- Tab bar (d-pad inspired segmented control) ---------- */
   .tabbar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    max-width: 480px;
+    margin: 0 auto;
+    z-index: 100;
     display: flex;
-    margin: 4px 16px 14px;
+    align-items: center;
     background: var(--navy-panel);
-    border: 1px solid var(--navy-line-soft);
-    border-radius: 14px;
-    padding: 4px;
-    box-shadow: inset 0 2px 6px rgba(30,50,100,0.12);
+    border-top: 1px solid var(--navy-line-soft);
+    padding: 8px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -4px 16px rgba(30,50,100,0.08);
     gap: 4px;
   }
   .tab-btn {
     flex: 1;
     text-align: center;
-    padding: 10px 0;
+    padding: 8px 0 4px;
     border-radius: 10px;
-    font-size: 12px;
+    font-size: 10.5px;
     font-weight: 700;
     color: var(--ink-dim);
-    letter-spacing: 0.03em;
+    letter-spacing: 0.02em;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    transition: color .15s ease;
+    position: relative;
+  }
+  .tab-btn.active {
+    color: var(--crab-deep);
+  }
+  .tab-btn svg { width: 20px; height: 20px; }
+  .tab-btn .unread-dot { position: absolute; top: 2px; right: calc(50% - 16px); }
+
+  .tab-fab-slot {
+    flex: none;
+    width: 56px;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    transition: color .15s ease;
+    margin-top: -28px;
   }
-  .tab-btn.active {
-    background: linear-gradient(180deg, var(--navy-panel-2), #1a2745);
-    color: var(--sea);
-    box-shadow: 0 2px 0 rgba(30,50,100,0.14), inset 0 1px 0 rgba(255,255,255,0.7), 0 0 0 1px var(--navy-line);
+  .tab-fab-btn {
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+    background: linear-gradient(155deg, var(--crab-glow), var(--crab));
+    border: none;
+    box-shadow: 0 5px 0 var(--crab-deep), 0 10px 20px rgba(0,0,0,0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform .1s ease;
   }
-  .tab-btn svg { width: 15px; height: 15px; }
+  .tab-fab-btn:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--crab-deep); }
+  .tab-fab-btn svg { width: 24px; height: 24px; }
 
   /* ---------- Tag filter row ---------- */
   /* ---------- Pull to refresh ---------- */
@@ -665,31 +695,6 @@
   }
   .grid-photo .grid-fav svg { width: 100%; height: 100%; }
 
-  /* ---------- FAB ---------- */
-  .fab-wrap {
-    position: fixed;
-    bottom: 0; left: 0; right: 0;
-    display: flex;
-    justify-content: center;
-    max-width: 480px;
-    margin: 0 auto;
-    z-index: 100;
-    pointer-events: none;
-    padding-bottom: 24px;
-  }
-  .fab {
-    width: 60px; height: 60px;
-    border-radius: 18px;
-    background: linear-gradient(155deg, var(--crab-glow), var(--crab));
-    border: none;
-    box-shadow: 0 6px 0 var(--crab-deep), 0 14px 26px rgba(30,50,100,0.14);
-    display: flex; align-items: center; justify-content: center;
-    pointer-events: all;
-    transition: transform .1s ease;
-  }
-  .fab:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--crab-deep); }
-  .fab svg { width: 26px; height: 26px; }
-
   /* ---------- Modal ---------- */
   .modal-overlay {
     position: fixed; inset: 0;
@@ -925,6 +930,48 @@
     touch-action: none;
   }
 
+  /* ---------- Simple crop position picker ---------- */
+  .crop-preview-stage {
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 14px;
+    overflow: hidden;
+    background: var(--navy-deep);
+    border: 1px solid var(--navy-line);
+    margin-bottom: 14px;
+    position: relative;
+  }
+  .crop-preview-stage img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .crop-position-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .crop-position-btn {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--navy-deep);
+    border: 1px solid var(--navy-line-soft);
+    border-radius: 10px;
+    box-shadow: 0 2px 0 rgba(30,50,100,0.10);
+  }
+  .crop-position-btn svg { width: 16px; height: 16px; }
+  .crop-position-btn.active {
+    background: linear-gradient(180deg, var(--crab-glow), var(--crab));
+    border-color: var(--crab-deep);
+    box-shadow: 0 2px 0 var(--crab-deep);
+  }
+  .crop-position-btn.active svg circle,
+  .crop-position-btn.active svg path { stroke: #2a0d05 !important; }
+
   /* ---------- Login gate ---------- */
   .gate {
     position: fixed; inset: 0;
@@ -991,18 +1038,6 @@
       </div>
     </div>
 
-    <div class="tabbar">
-      <div class="tab-btn active" data-view="timeline">
-        <svg viewBox="0 0 24 24" fill="none"><path d="M3 12H21M3 6H21M3 18H14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-        タイムライン
-        <span class="unread-dot" id="tab-unread-dot" style="display:none;"></span>
-      </div>
-      <div class="tab-btn" data-view="profile">
-        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.5" stroke="currentColor" stroke-width="2"/><path d="M4.5 20C5.5 16 8.5 14 12 14C15.5 14 18.5 16 19.5 20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-        プロフィール
-      </div>
-    </div>
-
     <!-- Timeline view -->
     <div class="view active" id="view-timeline">
       <div class="pull-refresh" id="pull-refresh">
@@ -1039,10 +1074,21 @@
     </div>
   </div>
 
-  <div class="fab-wrap" id="fab-wrap" style="display:none;">
-    <button class="fab" id="open-post-modal">
-      <svg viewBox="0 0 24 24" fill="none"><path d="M12 5V19M5 12H19" stroke="#2a0d05" stroke-width="3" stroke-linecap="round"/></svg>
-    </button>
+  <div class="tabbar" id="tabbar-nav" style="display:none;">
+    <div class="tab-btn active" data-view="timeline">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M3 12H21M3 6H21M3 18H14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      タイムライン
+      <span class="unread-dot" id="tab-unread-dot" style="display:none;"></span>
+    </div>
+    <div class="tab-fab-slot">
+      <button class="tab-fab-btn" id="open-post-modal">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 5V19M5 12H19" stroke="#2a0d05" stroke-width="3" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="tab-btn" data-view="profile">
+      <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.5" stroke="currentColor" stroke-width="2"/><path d="M4.5 20C5.5 16 8.5 14 12 14C15.5 14 18.5 16 19.5 20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      プロフィール
+    </div>
   </div>
 
   <!-- New Post Modal -->
@@ -1108,6 +1154,18 @@
         <div class="cal-grid" id="cal-grid"></div>
       </div>
       <div class="cal-clear" id="cal-clear-btn">絞り込みを解除する</div>
+    </div>
+  </div>
+
+  <!-- Simple crop position picker -->
+  <div class="modal-overlay center" id="crop-position-modal">
+    <div class="modal-sheet center-sheet">
+      <div class="modal-title">どこを中心にする？</div>
+      <div class="crop-preview-stage" id="crop-preview-stage">
+        <img id="crop-preview-image" src="" alt="">
+      </div>
+      <div class="crop-position-grid" id="crop-position-grid"></div>
+      <button class="btn-primary" id="crop-position-confirm">この写真にする</button>
     </div>
   </div>
 
@@ -1340,7 +1398,7 @@ function startKaniMemoryApp() {
   const gate = document.getElementById('gate');
   const nameGate = document.getElementById('name-gate');
   const mainUI = document.getElementById('main-ui');
-  const fabWrap = document.getElementById('fab-wrap');
+  const tabbarNav = document.getElementById('tabbar-nav');
 
   document.getElementById('gate-enter').onclick = enterRoom;
   document.getElementById('gate-passcode').addEventListener('keydown', e => { if (e.key === 'Enter') enterRoom(); });
@@ -1384,7 +1442,7 @@ function startKaniMemoryApp() {
     gate.style.display = 'none';
     nameGate.style.display = 'none';
     mainUI.style.display = 'block';
-    fabWrap.style.display = 'flex';
+    tabbarNav.style.display = 'flex';
 
     await registerParticipant(myName);
     await loadParticipants();
@@ -1855,7 +1913,6 @@ function startKaniMemoryApp() {
       const target = tab.dataset.view;
       document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
       document.getElementById('view-' + target).classList.add('active');
-      fabWrap.style.display = target === 'timeline' ? 'flex' : 'none';
       if (target === 'profile') { renderProfileHeader(); renderProfileGrid(); }
     };
   });
@@ -2143,6 +2200,9 @@ function startKaniMemoryApp() {
   }
 
   let rawUploadedImageSrc = null;
+  let rawImageForCrop = null;
+  let cropPosition = { x: 50, y: 50 }; // percentage, for object-position
+
   function handlePhotoSelect(e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -2150,31 +2210,75 @@ function startKaniMemoryApp() {
     reader.onload = function (evt) {
       const img = new Image();
       img.onload = () => {
-        // Simple auto center-crop to a square, like a typical mobile post composer.
-        // This avoids the complexity (and bugs) of manual drag/pinch cropping.
-        const size = Math.min(img.width, img.height);
-        const sx = (img.width - size) / 2;
-        const sy = (img.height - size) / 2;
-
-        const maxOutDim = 1600;
-        const outDim = Math.min(size, maxOutDim);
-
-        const canvas = document.createElement('canvas');
-        canvas.width = outDim;
-        canvas.height = outDim;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, sx, sy, size, size, 0, 0, outDim, outDim);
-
-        pendingPhotoDataUrl = canvas.toDataURL('image/jpeg', 0.85);
-        const drop = document.getElementById('photo-drop');
-        drop.innerHTML = `<img src="${pendingPhotoDataUrl}" alt="">`;
-        updateSubmitState();
+        rawImageForCrop = img;
+        cropPosition = { x: 50, y: 50 };
+        openCropPositionPicker(evt.target.result);
       };
       img.src = evt.target.result;
     };
     reader.readAsDataURL(file);
   }
   wirePhotoInput();
+
+  function openCropPositionPicker(src) {
+    const previewImg = document.getElementById('crop-preview-image');
+    previewImg.src = src;
+    previewImg.style.objectPosition = '50% 50%';
+    buildCropPositionGrid();
+    document.getElementById('crop-position-modal').classList.add('open');
+  }
+
+  function buildCropPositionGrid() {
+    const grid = document.getElementById('crop-position-grid');
+    const positions = [
+      [0, 0], [50, 0], [100, 0],
+      [0, 50], [50, 50], [100, 50],
+      [0, 100], [50, 100], [100, 100]
+    ];
+    grid.innerHTML = '';
+    positions.forEach(([x, y]) => {
+      const btn = document.createElement('div');
+      btn.className = 'crop-position-btn' + (x === cropPosition.x && y === cropPosition.y ? ' active' : '');
+      btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4" stroke="#6b5a3d" stroke-width="2"/></svg>`;
+      btn.onclick = () => {
+        cropPosition = { x, y };
+        document.getElementById('crop-preview-image').style.objectPosition = `${x}% ${y}%`;
+        buildCropPositionGrid();
+      };
+      grid.appendChild(btn);
+    });
+  }
+
+  document.getElementById('crop-position-confirm').onclick = () => {
+    if (!rawImageForCrop) return;
+    const img = rawImageForCrop;
+    const size = Math.min(img.width, img.height);
+    const maxSx = img.width - size;
+    const maxSy = img.height - size;
+    const sx = maxSx * (cropPosition.x / 100);
+    const sy = maxSy * (cropPosition.y / 100);
+
+    const maxOutDim = 1600;
+    const outDim = Math.min(size, maxOutDim);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = outDim;
+    canvas.height = outDim;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, sx, sy, size, size, 0, 0, outDim, outDim);
+
+    pendingPhotoDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+    const drop = document.getElementById('photo-drop');
+    drop.innerHTML = `<img src="${pendingPhotoDataUrl}" alt="">`;
+    updateSubmitState();
+    document.getElementById('crop-position-modal').classList.remove('open');
+  };
+
+  document.getElementById('crop-position-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'crop-position-modal') {
+      document.getElementById('crop-position-modal').classList.remove('open');
+    }
+  });
 
   document.getElementById('caption-input').addEventListener('input', updateSubmitState);
   function updateSubmitState() {
