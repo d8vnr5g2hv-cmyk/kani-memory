@@ -1598,9 +1598,45 @@ function startKaniMemoryApp() {
   // Single round-trip loader used at boot: fetches the whole room's data once,
   // then fans it out into participants / profiles / favorites / entries / comments.
   // This replaces what used to be 5+ separate sequential Firestore round-trips.
+  function cacheKeyForRoom() { return 'kanimemory_cache_' + room; }
+
+  function saveRoomCache() {
+    try {
+      const snapshot = { participants, profiles, favorites, entries, commentsByEntry, savedAt: Date.now() };
+      localStorage.setItem(cacheKeyForRoom(), JSON.stringify(snapshot));
+    } catch (e) {
+      // Storage might be full (photos take space) — not critical, just skip caching this time.
+      console.warn('room cache save skipped:', e);
+    }
+  }
+
+  function loadRoomCacheIfAny() {
+    try {
+      const raw = localStorage.getItem(cacheKeyForRoom());
+      if (!raw) return false;
+      const snapshot = JSON.parse(raw);
+      participants = snapshot.participants || [];
+      profiles = snapshot.profiles || {};
+      favorites = snapshot.favorites || [];
+      entries = snapshot.entries || [];
+      commentsByEntry = snapshot.commentsByEntry || {};
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
   async function loadAllRoomData() {
     const timeline = document.getElementById('timeline');
-    timeline.innerHTML = '<div class="loading-dots"><span></span><span></span><span></span></div>';
+
+    // Show last-known data immediately (if we have it) instead of a blank
+    // loading state, then quietly refresh in the background.
+    const hadCache = loadRoomCacheIfAny();
+    if (hadCache) {
+      renderAllViews();
+    } else {
+      timeline.innerHTML = '<div class="loading-dots"><span></span><span></span><span></span></div>';
+    }
 
     try {
       const allItems = await safeGetAll();
@@ -1655,8 +1691,11 @@ function startKaniMemoryApp() {
       commentsByEntry = grouped;
 
       renderAllViews();
+      saveRoomCache();
     } catch (e) {
-      timeline.innerHTML = `<div class="empty-state"><p style="color:#c94326; font-weight:bold;">読み込みエラー</p><p style="word-break:break-all; font-size:11px; margin-top:8px;">${escapeHtml(e && e.message ? e.message : String(e))}</p></div>`;
+      if (!hadCache) {
+        timeline.innerHTML = `<div class="empty-state"><p style="color:#c94326; font-weight:bold;">読み込みエラー</p><p style="word-break:break-all; font-size:11px; margin-top:8px;">${escapeHtml(e && e.message ? e.message : String(e))}</p></div>`;
+      }
       console.error('loadAllRoomData failed:', e);
     }
   }
@@ -2318,7 +2357,7 @@ function startKaniMemoryApp() {
     const sx = maxSx * (cropPosition.x / 100);
     const sy = maxSy * (cropPosition.y / 100);
 
-    const maxOutDim = 1600;
+    const maxOutDim = 1000;
     const outDim = Math.min(size, maxOutDim);
 
     const canvas = document.createElement('canvas');
@@ -2327,7 +2366,7 @@ function startKaniMemoryApp() {
     const ctx = canvas.getContext('2d');
     ctx.drawImage(img, sx, sy, size, size, 0, 0, outDim, outDim);
 
-    pendingPhotoDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+    pendingPhotoDataUrl = canvas.toDataURL('image/jpeg', 0.72);
     const drop = document.getElementById('photo-drop');
     drop.innerHTML = `<img src="${pendingPhotoDataUrl}" alt="">`;
     updateSubmitState();
