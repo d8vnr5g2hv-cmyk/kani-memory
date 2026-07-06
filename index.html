@@ -7,6 +7,10 @@
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
 <title>カニメモリー</title>
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+<link rel="dns-prefetch" href="https://www.gstatic.com">
+<link rel="dns-prefetch" href="https://firestore.googleapis.com">
 <style>
   * {
     margin: 0;
@@ -1246,13 +1250,15 @@ function startKaniMemoryApp() {
   function waitForKaniStorage() {
     if (window.kaniStorageReady && window.kaniStorage) return Promise.resolve();
     return new Promise((resolve, reject) => {
-      const startedAt = Date.now();
-      const check = () => {
-        if (window.kaniStorageReady && window.kaniStorage) { resolve(); return; }
-        if (Date.now() - startedAt > 10000) { reject(new Error('データベースへの接続に時間がかかっています。通信環境を確認してもう一度お試しください。')); return; }
-        setTimeout(check, 100);
-      };
-      check();
+      const timeoutId = setTimeout(() => {
+        window.removeEventListener('kani-storage-ready', onReady);
+        reject(new Error('データベースへの接続に時間がかかっています。通信環境を確認してもう一度お試しください。'));
+      }, 10000);
+      function onReady() {
+        clearTimeout(timeoutId);
+        resolve();
+      }
+      window.addEventListener('kani-storage-ready', onReady, { once: true });
     });
   }
 
