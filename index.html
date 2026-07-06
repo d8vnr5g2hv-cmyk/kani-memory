@@ -2,6 +2,9 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
 <title>カニメモリー</title>
 <style>
@@ -191,6 +194,23 @@
   .tab-btn svg { width: 15px; height: 15px; }
 
   /* ---------- Tag filter row ---------- */
+  /* ---------- Pull to refresh ---------- */
+  .pull-refresh {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 0;
+    overflow: hidden;
+    color: var(--ink-dimmer);
+    font-size: 11px;
+    font-weight: 600;
+    transition: height .2s ease;
+  }
+  .pull-refresh.dragging { transition: none; }
+  .pull-refresh.spinning .pull-refresh-icon { animation: spin-crab 0.8s linear infinite; }
+  @keyframes spin-crab { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
   .tagbar {
     display: flex;
     gap: 8px;
@@ -959,6 +979,12 @@
 
     <!-- Timeline view -->
     <div class="view active" id="view-timeline">
+      <div class="pull-refresh" id="pull-refresh">
+        <div class="pull-refresh-icon">
+          <div class="crab-pixel" id="pull-refresh-crab" style="width:20px;height:16px;"></div>
+        </div>
+        <span id="pull-refresh-label">ひっぱって更新</span>
+      </div>
       <div class="tagbar" id="tagbar">
         <div class="tag-chip active" data-tag="__all__">すべて</div>
       </div>
@@ -1146,6 +1172,20 @@
       });
       return { keys, shared: true };
     },
+    async listWithValues(prefix) {
+      // Fetch the whole collection once and return key+value pairs,
+      // avoiding a separate getDoc() round-trip per key.
+      const colRef = collection(db, 'kani_data');
+      const snap = await getDocs(colRef);
+      const items = [];
+      snap.forEach(d => {
+        const originalKey = d.id.replace(/__SLASH__/g, '/');
+        if (!prefix || originalKey.startsWith(prefix)) {
+          items.push({ key: originalKey, value: d.data().value });
+        }
+      });
+      return { items, shared: true };
+    },
     async delete(key) {
       const ref = doc(db, 'kani_data', sanitizeDocId(key));
       await deleteDoc(ref);
@@ -1199,7 +1239,7 @@ function startKaniMemoryApp() {
       });
     });
   }
-  ['gate-crab','name-crab','logo-crab'].forEach(id => renderCrab(document.getElementById(id)));
+  ['gate-crab','name-crab','logo-crab','pull-refresh-crab'].forEach(id => renderCrab(document.getElementById(id)));
 
   function k(base) { return room + ':' + base; }
 
@@ -1250,6 +1290,14 @@ function startKaniMemoryApp() {
       await waitForKaniStorage();
       const r = await window.kaniStorage.list(prefix);
       return r ? r.keys : [];
+    }
+    catch (e) { return []; }
+  }
+  async function safeListWithValues(prefix) {
+    try {
+      await waitForKaniStorage();
+      const r = await window.kaniStorage.listWithValues(prefix);
+      return r ? r.items : [];
     }
     catch (e) { return []; }
   }
@@ -1326,6 +1374,56 @@ function startKaniMemoryApp() {
 
   (async function tryAutoBoot() { if (room && myName) await bootMain(); })();
 
+  // ---------- pull to refresh ----------
+  (function setupPullToRefresh() {
+    const el = document.getElementById('pull-refresh');
+    const label = document.getElementById('pull-refresh-label');
+    if (!el) return;
+    let startY = null;
+    let pulling = false;
+    const THRESHOLD = 70;
+
+    function isTimelineActive() {
+      return document.getElementById('view-timeline').classList.contains('active');
+    }
+
+    window.addEventListener('touchstart', (e) => {
+      if (!isTimelineActive()) { startY = null; return; }
+      if (window.scrollY > 2) { startY = null; return; }
+      startY = e.touches[0].clientY;
+      pulling = false;
+    }, { passive: true });
+
+    window.addEventListener('touchmove', (e) => {
+      if (startY === null || !isTimelineActive()) return;
+      const diff = e.touches[0].clientY - startY;
+      if (diff > 0 && window.scrollY <= 2) {
+        pulling = true;
+        const capped = Math.min(diff * 0.5, 90);
+        el.classList.add('dragging');
+        el.style.height = capped + 'px';
+        label.textContent = capped > THRESHOLD ? 'はなすと更新' : 'ひっぱって更新';
+      }
+    }, { passive: true });
+
+    window.addEventListener('touchend', async () => {
+      if (!pulling) { startY = null; return; }
+      const currentHeight = parseFloat(el.style.height || '0');
+      el.classList.remove('dragging');
+      if (currentHeight > THRESHOLD) {
+        el.style.height = '46px';
+        el.classList.add('spinning');
+        label.textContent = 'こうしんちゅう...';
+        await loadEntries();
+        el.classList.remove('spinning');
+        label.textContent = 'ひっぱって更新';
+      }
+      el.style.height = '0px';
+      startY = null;
+      pulling = false;
+    }, { passive: true });
+  })();
+
   // ---------- participants & profiles ----------
   async function loadParticipants() {
     const raw = await safeGet(k('participants'));
@@ -1368,12 +1466,11 @@ function startKaniMemoryApp() {
     timeline.innerHTML = '<div class="loading-dots"><span></span><span></span><span></span></div>';
 
     try {
-      const keys = await safeList(k('entries:'));
+      const items = await safeListWithValues(k('entries:'));
       const loaded = [];
-      for (const key of keys) {
-        const raw = await safeGet(key);
-        if (!raw) continue;
-        try { loaded.push(JSON.parse(raw)); } catch (e) {}
+      for (const item of items) {
+        if (!item.value) continue;
+        try { loaded.push(JSON.parse(item.value)); } catch (e) {}
       }
       loaded.sort((a, b) => b.createdAt - a.createdAt);
       entries = loaded;
@@ -1547,12 +1644,11 @@ function startKaniMemoryApp() {
   }
 
   async function loadComments(entryId) {
-    const keys = await safeList(k('comments:' + entryId + ':'));
+    const items = await safeListWithValues(k('comments:' + entryId + ':'));
     const loaded = [];
-    for (const key of keys) {
-      const raw = await safeGet(key);
-      if (!raw) continue;
-      try { loaded.push(JSON.parse(raw)); } catch (e) {}
+    for (const item of items) {
+      if (!item.value) continue;
+      try { loaded.push(JSON.parse(item.value)); } catch (e) {}
     }
     loaded.sort((a, b) => a.createdAt - b.createdAt);
     commentsByEntry[entryId] = loaded;
