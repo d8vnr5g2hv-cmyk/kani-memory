@@ -11,6 +11,9 @@
 <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
 <link rel="dns-prefetch" href="https://www.gstatic.com">
 <link rel="dns-prefetch" href="https://firestore.googleapis.com">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Yomogi&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
 <style>
   * {
     margin: 0;
@@ -115,8 +118,9 @@
   }
   .logo-block .crab-pixel { width: 26px; height: 20px; }
   .logo-text {
-    font-size: 15px;
-    font-weight: 700;
+    font-family: 'Zen Maru Gothic', 'Hiragino Kaku Gothic ProN', sans-serif;
+    font-size: 16px;
+    font-weight: 900;
     letter-spacing: 0.04em;
     color: var(--ink);
   }
@@ -367,6 +371,7 @@
     height: 100%;
     object-fit: cover;
     display: block;
+    cursor: zoom-in;
   }
   .card-photo-wrap::after {
     content: '';
@@ -408,7 +413,7 @@
   .fav-btn svg { width: 17px; height: 17px; }
   .fav-btn:active { transform: scale(0.92); }
 
-  .card-body { padding: 14px 16px 16px; }
+  .card-body { padding: 16px 18px 18px; }
 
   .card-author-row {
     display: flex;
@@ -433,14 +438,15 @@
   }
   .avatar-tile img { width: 100%; height: 100%; object-fit: cover; }
   .card-author {
-    font-size: 12px;
+    font-family: 'Zen Maru Gothic', sans-serif;
+    font-size: 13px;
     color: var(--sea);
-    font-weight: 700;
+    font-weight: 800;
   }
 
   .card-caption {
-    font-size: 14px;
-    line-height: 1.7;
+    font-size: 14.5px;
+    line-height: 1.75;
     color: var(--ink);
     margin-bottom: 10px;
     word-break: break-word;
@@ -487,6 +493,15 @@
     display: flex;
     align-items: center;
     gap: 5px;
+    position: relative;
+  }
+  .unread-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--crab);
+    display: inline-block;
+    box-shadow: 0 0 0 2px #fff;
   }
   .delete-entry-btn {
     font-size: 11px;
@@ -565,7 +580,7 @@
     justify-content: center;
     font-size: 12px;
   }
-  .profile-name { font-size: 16px; font-weight: 800; color: var(--ink); margin-bottom: 4px; }
+  .profile-name { font-family: 'Zen Maru Gothic', sans-serif; font-size: 17px; font-weight: 900; color: var(--ink); margin-bottom: 4px; }
   .profile-sub { font-size: 11px; color: var(--ink-dimmer); }
 
   .profile-participants {
@@ -576,6 +591,12 @@
     scrollbar-width: none;
   }
   .profile-participants::-webkit-scrollbar { display: none; }
+  .participants-hint {
+    font-size: 10px;
+    color: var(--ink-dimmer);
+    text-align: center;
+    padding: 0 16px 12px;
+  }
   .participant-chip {
     flex: none;
     display: flex;
@@ -701,7 +722,8 @@
   @keyframes slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
 
   .modal-title {
-    font-size: 14px;
+    font-family: 'Zen Maru Gothic', sans-serif;
+    font-size: 15px;
     font-weight: 800;
     color: var(--ink);
     letter-spacing: 0.05em;
@@ -861,48 +883,47 @@
     padding: 20px 0;
   }
 
-  /* ---------- Cropper modal ---------- */
-  .crop-stage {
-    width: 100%;
-    aspect-ratio: 1;
-    background: #f1ece0;
-    border-radius: 14px;
-    overflow: hidden;
-    position: relative;
+  /* ---------- Photo lightbox ---------- */
+  .lightbox-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 8, 4, 0.92);
+    z-index: 300;
+    display: none;
+    align-items: center;
+    justify-content: center;
     touch-action: none;
-    margin-bottom: 14px;
-    border: 1px solid var(--navy-line);
   }
-  .crop-stage img {
+  .lightbox-overlay.open { display: flex; }
+  .lightbox-close {
     position: absolute;
-    max-width: none;
-    max-height: none;
-    transform-origin: 0 0;
-    will-change: transform;
+    top: 20px;
+    right: 20px;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #fff;
+    font-size: 16px;
+    z-index: 2;
   }
-  .crop-hint {
-    font-size: 10px;
-    color: var(--ink-dimmer);
-    text-align: center;
-    margin-bottom: 14px;
-  }
-  .crop-aspect-row {
+  .lightbox-stage {
+    width: 100%;
+    height: 100%;
     display: flex;
-    gap: 8px;
-    margin-bottom: 14px;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
   }
-  .crop-aspect-btn {
-    flex: 1;
-    text-align: center;
-    padding: 9px 0;
-    font-size: 11px;
-    font-weight: 700;
-    background: var(--navy-deep);
-    border: 1px solid var(--navy-line-soft);
-    border-radius: 9px;
-    color: var(--ink-dim);
+  .lightbox-stage img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    transform-origin: center center;
+    will-change: transform;
+    touch-action: none;
   }
-  .crop-aspect-btn.active { color: var(--sea); border-color: var(--sea-deep); box-shadow: 0 2px 0 var(--sea-deep); }
 
   /* ---------- Login gate ---------- */
   .gate {
@@ -915,7 +936,7 @@
     padding: 32px; text-align: center;
   }
   .gate .crab-pixel { width: 100px; height: 78px; margin-bottom: 22px; }
-  .gate h1 { font-size: 22px; font-weight: 800; color: var(--ink); letter-spacing: 0.06em; margin-bottom: 10px; }
+  .gate h1 { font-family: 'Zen Maru Gothic', sans-serif; font-size: 24px; font-weight: 900; color: var(--ink); letter-spacing: 0.06em; margin-bottom: 10px; }
   .gate p { font-size: 12px; color: var(--ink-dim); line-height: 1.8; margin-bottom: 26px; }
   .gate .text-input { text-align: center; letter-spacing: 0.1em; margin-bottom: 12px; }
   .gate-error { font-size: 11px; color: #ff9d9d; margin-bottom: 8px; min-height: 14px; }
@@ -974,6 +995,7 @@
       <div class="tab-btn active" data-view="timeline">
         <svg viewBox="0 0 24 24" fill="none"><path d="M3 12H21M3 6H21M3 18H14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
         タイムライン
+        <span class="unread-dot" id="tab-unread-dot" style="display:none;"></span>
       </div>
       <div class="tab-btn" data-view="profile">
         <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.5" stroke="currentColor" stroke-width="2"/><path d="M4.5 20C5.5 16 8.5 14 12 14C15.5 14 18.5 16 19.5 20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
@@ -1008,6 +1030,7 @@
         <div class="profile-sub" id="profile-sub">じぶんのきろく</div>
       </div>
       <div class="profile-participants" id="profile-participants"></div>
+      <div class="participants-hint">長押しでリストから消せるよ</div>
       <div class="profile-subtabs">
         <div class="subtab-btn active" data-sub="posts">とうこう</div>
         <div class="subtab-btn" data-sub="favorites">お気に入り</div>
@@ -1061,24 +1084,6 @@
     </div>
   </div>
 
-  <!-- Crop Modal -->
-  <div class="modal-overlay center" id="crop-modal">
-    <div class="modal-sheet center-sheet">
-      <div class="modal-title">写真の位置を調整</div>
-      <div class="crop-aspect-row">
-        <div class="crop-aspect-btn active" data-ratio="1">正方形</div>
-        <div class="crop-aspect-btn" data-ratio="0.8">縦長</div>
-        <div class="crop-aspect-btn" data-ratio="1.25">横長</div>
-      </div>
-      <div class="crop-stage" id="crop-stage">
-        <img id="crop-image" src="" alt="">
-      </div>
-      <div class="crop-hint">ドラッグで位置調整・指2本でひろげると拡大</div>
-      <button class="btn-primary" id="crop-confirm">この写真にする</button>
-      <button class="btn-secondary" id="crop-cancel">選びなおす</button>
-    </div>
-  </div>
-
   <!-- Search Modal -->
   <div class="modal-overlay" id="search-modal">
     <div class="modal-sheet">
@@ -1103,6 +1108,14 @@
         <div class="cal-grid" id="cal-grid"></div>
       </div>
       <div class="cal-clear" id="cal-clear-btn">絞り込みを解除する</div>
+    </div>
+  </div>
+
+  <!-- Photo Lightbox -->
+  <div class="lightbox-overlay" id="lightbox-overlay">
+    <button class="lightbox-close" id="lightbox-close">✕</button>
+    <div class="lightbox-stage" id="lightbox-stage">
+      <img id="lightbox-image" src="" alt="">
     </div>
   </div>
 
@@ -1203,6 +1216,7 @@
 function startKaniMemoryApp() {
   const STORAGE_ROOM_KEY = 'kanimemory_room_v1';
   const STORAGE_NAME_KEY = 'kanimemory_name_v1';
+  const STORAGE_SEEN_KEY = 'kanimemory_seen_comments_v1';
 
   let room = localStorage.getItem(STORAGE_ROOM_KEY) || '';
   let myName = localStorage.getItem(STORAGE_NAME_KEY) || '';
@@ -1219,6 +1233,10 @@ function startKaniMemoryApp() {
   let currentProfileTarget = null; // name being viewed in profile
   let currentSubtab = 'posts';
   let calMonth = new Date();
+  let seenCommentsAt = {}; // entryId -> timestamp of last time I viewed its comments
+  try {
+    seenCommentsAt = JSON.parse(localStorage.getItem(STORAGE_SEEN_KEY) || '{}');
+  } catch (e) { seenCommentsAt = {}; }
 
   // ---------- pixel crab rendering ----------
   const CRAB_PATTERN = [
@@ -1387,7 +1405,7 @@ function startKaniMemoryApp() {
     if (!el) return;
     let startY = null;
     let pulling = false;
-    const THRESHOLD = 100;
+    const THRESHOLD = 130;
 
     function isTimelineActive() {
       return document.getElementById('view-timeline').classList.contains('active');
@@ -1405,7 +1423,7 @@ function startKaniMemoryApp() {
       const diff = e.touches[0].clientY - startY;
       if (diff > 0 && window.scrollY <= 2) {
         pulling = true;
-        const capped = Math.min(diff * 0.35, 120);
+        const capped = Math.min(diff * 0.25, 140);
         el.classList.add('dragging');
         el.style.height = capped + 'px';
         label.textContent = capped > THRESHOLD ? 'はなすと更新' : 'ひっぱって更新';
@@ -1446,12 +1464,34 @@ function startKaniMemoryApp() {
 
   function initials(name) { return name ? name.charAt(0) : '?'; }
 
+  const AVATAR_PALETTE = [
+    ['#2a95a8', '#1c6e7d'], // sea (default/first)
+    ['#ff6b52', '#c94326'], // crab
+    ['#e0a83a', '#c9932a'], // gold
+    ['#8a7ad9', '#5f4fb0'], // lavender
+    ['#4fb37a', '#2f8a58'], // leaf
+    ['#e0709a', '#b84b74']  // sakura
+  ];
+  function colorForName(name) {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+    }
+    return AVATAR_PALETTE[hash % AVATAR_PALETTE.length];
+  }
+
   function avatarHtml(name, sizeClass) {
     const prof = profiles[name];
     if (prof && prof.avatar) {
       return `<img src="${prof.avatar}" alt="">`;
     }
     return `<span>${escapeHtml(initials(name))}</span>`;
+  }
+  function avatarStyle(name) {
+    const prof = profiles[name];
+    if (prof && prof.avatar) return '';
+    const [c1, c2] = colorForName(name);
+    return `background: linear-gradient(155deg, ${c1}, ${c2}); box-shadow: 0 2px 0 ${c2};`;
   }
 
   // ---------- favorites ----------
@@ -1481,14 +1521,52 @@ function startKaniMemoryApp() {
       loaded.sort((a, b) => b.createdAt - a.createdAt);
       entries = loaded;
 
+      // Pre-fetch all comments in one pass so we can compute unread badges
+      // without opening every comment thread individually.
+      const commentItems = await safeListWithValues(k('comments:'));
+      const grouped = {};
+      for (const item of commentItems) {
+        if (!item.value) continue;
+        // key format: entries... no wait, comments:<entryId>:<commentId>
+        const withoutRoomPrefix = item.key.slice(k('comments:').length); // "<entryId>:<commentId>"
+        const entryId = withoutRoomPrefix.split(':')[0];
+        if (!entryId) continue;
+        let parsed;
+        try { parsed = JSON.parse(item.value); } catch (e) { continue; }
+        if (!grouped[entryId]) grouped[entryId] = [];
+        grouped[entryId].push(parsed);
+      }
+      Object.keys(grouped).forEach(eid => grouped[eid].sort((a, b) => a.createdAt - b.createdAt));
+      commentsByEntry = grouped;
+
       buildTagBar();
       renderTimeline();
       renderCalendarGrid();
+      updateTabUnreadBadge();
       if (document.getElementById('view-profile').classList.contains('active')) renderProfileGrid();
     } catch (e) {
       timeline.innerHTML = `<div class="empty-state"><p style="color:#c94326; font-weight:bold;">読み込みエラー</p><p style="word-break:break-all; font-size:11px; margin-top:8px;">${escapeHtml(e && e.message ? e.message : String(e))}</p></div>`;
       console.error('loadEntries failed:', e);
     }
+  }
+
+  function hasUnreadComments(entryId) {
+    const comments = commentsByEntry[entryId] || [];
+    if (comments.length === 0) return false;
+    const lastSeen = seenCommentsAt[entryId] || 0;
+    return comments.some(c => c.author !== myName && c.createdAt > lastSeen);
+  }
+
+  function markCommentsSeen(entryId) {
+    seenCommentsAt[entryId] = Date.now();
+    localStorage.setItem(STORAGE_SEEN_KEY, JSON.stringify(seenCommentsAt));
+  }
+
+  function updateTabUnreadBadge() {
+    const dot = document.getElementById('tab-unread-dot');
+    if (!dot) return;
+    const anyUnread = entries.some(e => hasUnreadComments(e.id));
+    dot.style.display = anyUnread ? 'inline-block' : 'none';
   }
 
   function buildTagBar() {
@@ -1560,7 +1638,7 @@ function startKaniMemoryApp() {
 
     card.innerHTML = `
       <div class="card-photo-wrap">
-        <img src="${entry.photo}" loading="lazy" alt="">
+        <img src="${entry.photo}" loading="lazy" alt="" class="tappable-photo" data-photo="${entry.photo}">
         <div class="card-date-tag">${formatDate(entry.createdAt)}</div>
         <button class="fav-btn" data-id="${entry.id}">
           <svg viewBox="0 0 24 24" fill="${isFav ? '#ff6b52' : 'none'}"><path d="M12 20s-7-4.5-9.5-9C1 7.5 3 4 6.5 4C8.7 4 10.7 5.3 12 7C13.3 5.3 15.3 4 17.5 4C21 4 23 7.5 21.5 11C19 15.5 12 20 12 20Z" stroke="${isFav ? '#ff6b52' : '#8d9dc9'}" stroke-width="1.8"/></svg>
@@ -1568,14 +1646,14 @@ function startKaniMemoryApp() {
       </div>
       <div class="card-body">
         <div class="card-author-row">
-          <div class="avatar-tile">${avatarHtml(entry.author)}</div>
-          <div class="card-author">${escapeHtml(entry.author)}</div>
+          <div class="avatar-tile" style="${avatarStyle(entry.author)}">${avatarHtml(entry.author)}</div>
+          <div class="card-author" style="color:${colorForName(entry.author)[0]};">${escapeHtml(entry.author)}</div>
         </div>
         <div class="card-caption">${escapeHtml(entry.caption)}</div>
         ${mentionsHtml ? `<div class="card-mentions">${mentionsHtml}</div>` : ''}
         ${tagsHtml ? `<div class="card-tags">${tagsHtml}</div>` : ''}
         <div class="card-footer">
-          <button class="comment-toggle" data-id="${entry.id}">💬 コメント <span class="comment-count">${(commentsByEntry[entry.id]||[]).length || ''}</span></button>
+          <button class="comment-toggle" data-id="${entry.id}">💬 コメント <span class="comment-count">${(commentsByEntry[entry.id]||[]).length || ''}</span>${hasUnreadComments(entry.id) ? '<span class="unread-dot"></span>' : ''}</button>
           ${entry.author === myName ? `<button class="delete-entry-btn" data-id="${entry.id}">削除</button>` : ''}
         </div>
         <div class="comment-section" id="comments-${entry.id}">
@@ -1611,6 +1689,9 @@ function startKaniMemoryApp() {
     container.querySelectorAll('.delete-entry-btn').forEach(btn => {
       btn.onclick = () => deleteEntry(btn.dataset.id);
     });
+    container.querySelectorAll('.tappable-photo').forEach(img => {
+      img.onclick = () => openLightbox(img.dataset.photo);
+    });
   }
 
   async function deleteEntry(entryId) {
@@ -1636,6 +1717,90 @@ function startKaniMemoryApp() {
     if (document.getElementById('view-profile').classList.contains('active')) renderProfileGrid();
   }
 
+  // ---------- photo lightbox ----------
+  (function setupLightbox() {
+    const overlay = document.getElementById('lightbox-overlay');
+    const stage = document.getElementById('lightbox-stage');
+    const img = document.getElementById('lightbox-image');
+    const closeBtn = document.getElementById('lightbox-close');
+    let scale = 1, panX = 0, panY = 0;
+    let lastTouchDist = null;
+    let dragStart = null;
+    let lastTapTime = 0;
+
+    window.openLightbox = function (src) {
+      img.src = src;
+      scale = 1; panX = 0; panY = 0;
+      applyTransform();
+      overlay.classList.add('open');
+    };
+
+    function closeLightbox() {
+      overlay.classList.remove('open');
+    }
+    closeBtn.onclick = closeLightbox;
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeLightbox(); });
+
+    function applyTransform() {
+      img.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+    }
+
+    function touchDist(touches) {
+      const dx = touches[0].clientX - touches[1].clientX;
+      const dy = touches[0].clientY - touches[1].clientY;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    stage.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 2) {
+        lastTouchDist = touchDist(e.touches);
+      } else if (e.touches.length === 1) {
+        const now = Date.now();
+        if (now - lastTapTime < 280) {
+          // double tap: toggle zoom
+          scale = scale > 1 ? 1 : 2.2;
+          panX = 0; panY = 0;
+          applyTransform();
+        }
+        lastTapTime = now;
+        dragStart = { x: e.touches[0].clientX - panX, y: e.touches[0].clientY - panY };
+      }
+    }, { passive: true });
+
+    stage.addEventListener('touchmove', (e) => {
+      if (e.touches.length === 2) {
+        const dist = touchDist(e.touches);
+        if (lastTouchDist) {
+          const delta = (dist - lastTouchDist) * 0.01;
+          scale = Math.max(1, Math.min(4, scale + delta));
+          applyTransform();
+        }
+        lastTouchDist = dist;
+      } else if (e.touches.length === 1 && scale > 1 && dragStart) {
+        panX = e.touches[0].clientX - dragStart.x;
+        panY = e.touches[0].clientY - dragStart.y;
+        applyTransform();
+      }
+    }, { passive: true });
+
+    stage.addEventListener('touchend', (e) => {
+      if (e.touches.length < 2) lastTouchDist = null;
+      if (e.touches.length === 0) dragStart = null;
+    });
+
+    // desktop convenience: wheel to zoom, double-click to toggle
+    stage.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      scale = Math.max(1, Math.min(4, scale - e.deltaY * 0.002));
+      applyTransform();
+    }, { passive: false });
+    stage.addEventListener('dblclick', () => {
+      scale = scale > 1 ? 1 : 2.2;
+      panX = 0; panY = 0;
+      applyTransform();
+    });
+  })();
+
   function escapeHtml(str) {
     const div = document.createElement('div');
     div.textContent = str == null ? '' : String(str);
@@ -1645,7 +1810,12 @@ function startKaniMemoryApp() {
   async function toggleComments(entryId) {
     const section = document.getElementById('comments-' + entryId);
     const isOpen = section.classList.contains('open');
-    if (!isOpen) await loadComments(entryId);
+    if (!isOpen) {
+      await loadComments(entryId);
+      markCommentsSeen(entryId);
+      document.querySelectorAll(`.comment-toggle[data-id="${entryId}"] .unread-dot`).forEach(dot => dot.remove());
+      updateTabUnreadBadge();
+    }
     section.classList.toggle('open');
   }
 
@@ -1660,7 +1830,7 @@ function startKaniMemoryApp() {
     commentsByEntry[entryId] = loaded;
     const list = document.getElementById('comment-list-' + entryId);
     if (list) {
-      list.innerHTML = loaded.map(c => `<div class="comment-item"><b>${escapeHtml(c.author)}</b> ${escapeHtml(c.text)}</div>`).join('') ||
+      list.innerHTML = loaded.map(c => `<div class="comment-item"><b style="color:${colorForName(c.author)[0]};">${escapeHtml(c.author)}</b> ${escapeHtml(c.text)}</div>`).join('') ||
         `<div class="comment-item" style="color:var(--ink-dimmer);">まだコメントないよ</div>`;
     }
   }
@@ -1700,6 +1870,7 @@ function startKaniMemoryApp() {
     avatarBig.innerHTML = prof && prof.avatar
       ? `<img src="${prof.avatar}" alt="">`
       : `<span>${escapeHtml(initials(name))}</span>`;
+    avatarBig.setAttribute('style', avatarStyle(name) || avatarBig.getAttribute('style') || '');
     const editBtn = document.getElementById('profile-avatar-edit');
     if (name === myName) {
       const btn = document.createElement('div');
@@ -1717,8 +1888,29 @@ function startKaniMemoryApp() {
     participants.forEach(p => {
       const chip = document.createElement('div');
       chip.className = 'participant-chip' + (p === currentProfileTarget ? ' active' : '');
-      chip.innerHTML = `<div class="mini-avatar">${avatarHtml(p)}</div><span class="pname">${escapeHtml(p)}</span>`;
+      chip.innerHTML = `<div class="mini-avatar" style="${avatarStyle(p)}">${avatarHtml(p)}</div><span class="pname">${escapeHtml(p)}</span>`;
+
+      let pressTimer = null;
+      let longPressed = false;
+
+      const startPress = () => {
+        longPressed = false;
+        pressTimer = setTimeout(() => {
+          longPressed = true;
+          removeParticipant(p);
+        }, 600);
+      };
+      const cancelPress = () => { if (pressTimer) clearTimeout(pressTimer); };
+
+      chip.addEventListener('touchstart', startPress, { passive: true });
+      chip.addEventListener('touchend', cancelPress, { passive: true });
+      chip.addEventListener('touchmove', cancelPress, { passive: true });
+      chip.addEventListener('mousedown', startPress);
+      chip.addEventListener('mouseup', cancelPress);
+      chip.addEventListener('mouseleave', cancelPress);
+
       chip.onclick = () => {
+        if (longPressed) return; // long-press already handled removal, skip normal tap behavior
         currentProfileTarget = p;
         renderProfileParticipants();
         renderProfileHeader();
@@ -1729,6 +1921,20 @@ function startKaniMemoryApp() {
       };
       wrap.appendChild(chip);
     });
+  }
+
+  async function removeParticipant(name) {
+    const ok = window.confirm(`「${name}」を参加者リストから消すよ。\n投稿やコメントは残ったままになる。いい？`);
+    if (!ok) return;
+    const idx = participants.indexOf(name);
+    if (idx >= 0) {
+      participants.splice(idx, 1);
+      await safeSet(k('participants'), JSON.stringify(participants));
+    }
+    if (currentProfileTarget === name) currentProfileTarget = myName;
+    renderProfileParticipants();
+    renderProfileHeader();
+    renderProfileGrid();
   }
 
   document.querySelectorAll('.subtab-btn').forEach(btn => {
@@ -1942,8 +2148,29 @@ function startKaniMemoryApp() {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = function (evt) {
-      rawUploadedImageSrc = evt.target.result;
-      openCropper(rawUploadedImageSrc);
+      const img = new Image();
+      img.onload = () => {
+        // Simple auto center-crop to a square, like a typical mobile post composer.
+        // This avoids the complexity (and bugs) of manual drag/pinch cropping.
+        const size = Math.min(img.width, img.height);
+        const sx = (img.width - size) / 2;
+        const sy = (img.height - size) / 2;
+
+        const maxOutDim = 1600;
+        const outDim = Math.min(size, maxOutDim);
+
+        const canvas = document.createElement('canvas');
+        canvas.width = outDim;
+        canvas.height = outDim;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, sx, sy, size, size, 0, 0, outDim, outDim);
+
+        pendingPhotoDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        const drop = document.getElementById('photo-drop');
+        drop.innerHTML = `<img src="${pendingPhotoDataUrl}" alt="">`;
+        updateSubmitState();
+      };
+      img.src = evt.target.result;
     };
     reader.readAsDataURL(file);
   }
@@ -1954,175 +2181,6 @@ function startKaniMemoryApp() {
     const caption = document.getElementById('caption-input').value.trim();
     document.getElementById('submit-post').disabled = !(pendingPhotoDataUrl && caption);
   }
-
-  // ---------- cropper ----------
-  const cropModal = document.getElementById('crop-modal');
-  const cropStage = document.getElementById('crop-stage');
-  const cropImage = document.getElementById('crop-image');
-  let cropState = { img: null, scale: 1, minScale: 1, x: 0, y: 0, ratio: 1, naturalW: 0, naturalH: 0 };
-  let dragState = null;
-  let pinchState = null;
-
-  function openCropper(src) {
-    const img = new Image();
-    img.onload = () => {
-      cropState.img = img;
-      cropState.naturalW = img.width;
-      cropState.naturalH = img.height;
-      setCropRatio(1, true);
-      cropModal.classList.add('open');
-    };
-    img.src = src;
-    cropImage.src = src;
-  }
-
-  function stageSize() {
-    const rect = cropStage.getBoundingClientRect();
-    return { w: rect.width, h: rect.height };
-  }
-
-  function setCropRatio(ratio, isInit) {
-    cropState.ratio = ratio;
-    document.querySelectorAll('.crop-aspect-btn').forEach(b => b.classList.toggle('active', parseFloat(b.dataset.ratio) === ratio));
-    const stageW = 320; // stage is square container; we simulate viewport as square, crop area within
-    // Use square stage always for simplicity; ratio affects final export crop shape only
-    fitImageToStage(isInit);
-  }
-
-  function fitImageToStage() {
-    const { w: sw, h: sh } = stageSizeFallback();
-    const iw = cropState.naturalW, ih = cropState.naturalH;
-    const scaleToCover = Math.max(sw / iw, sh / ih);
-    cropState.minScale = scaleToCover;
-    cropState.scale = scaleToCover;
-    cropState.x = (sw - iw * cropState.scale) / 2;
-    cropState.y = (sh - ih * cropState.scale) / 2;
-    applyCropTransform();
-  }
-
-  function stageSizeFallback() {
-    const rect = cropStage.getBoundingClientRect();
-    return { w: rect.width || 320, h: rect.height || 320 };
-  }
-
-  function applyCropTransform() {
-    cropImage.style.width = cropState.naturalW + 'px';
-    cropImage.style.height = cropState.naturalH + 'px';
-    cropImage.style.transform = `translate(${cropState.x}px, ${cropState.y}px) scale(${cropState.scale})`;
-  }
-
-  function clampPan() {
-    const { w: sw, h: sh } = stageSizeFallback();
-    const iw = cropState.naturalW * cropState.scale;
-    const ih = cropState.naturalH * cropState.scale;
-    const minX = Math.min(0, sw - iw);
-    const minY = Math.min(0, sh - ih);
-    cropState.x = Math.max(minX, Math.min(0, cropState.x));
-    cropState.y = Math.max(minY, Math.min(0, cropState.y));
-  }
-
-  cropStage.addEventListener('pointerdown', (e) => {
-    cropStage.setPointerCapture(e.pointerId);
-    dragState = { startX: e.clientX, startY: e.clientY, origX: cropState.x, origY: cropState.y };
-  });
-  cropStage.addEventListener('pointermove', (e) => {
-    if (!dragState) return;
-    cropState.x = dragState.origX + (e.clientX - dragState.startX);
-    cropState.y = dragState.origY + (e.clientY - dragState.startY);
-    clampPan();
-    applyCropTransform();
-  });
-  ['pointerup','pointercancel','pointerleave'].forEach(ev => {
-    cropStage.addEventListener(ev, () => { dragState = null; });
-  });
-
-  // basic pinch-to-zoom via wheel (desktop) and touch distance (mobile)
-  cropStage.addEventListener('wheel', (e) => {
-    e.preventDefault();
-    const delta = -e.deltaY * 0.001;
-    zoomBy(delta);
-  }, { passive: false });
-
-  let lastTouchDist = null;
-  cropStage.addEventListener('touchstart', (e) => {
-    if (e.touches.length === 2) {
-      lastTouchDist = touchDist(e.touches);
-    }
-  }, { passive: true });
-  cropStage.addEventListener('touchmove', (e) => {
-    if (e.touches.length === 2) {
-      e.preventDefault();
-      const dist = touchDist(e.touches);
-      if (lastTouchDist) {
-        const delta = (dist - lastTouchDist) * 0.005;
-        zoomBy(delta);
-      }
-      lastTouchDist = dist;
-    }
-  }, { passive: false });
-  cropStage.addEventListener('touchend', (e) => { if (e.touches.length < 2) lastTouchDist = null; });
-
-  function touchDist(touches) {
-    const dx = touches[0].clientX - touches[1].clientX;
-    const dy = touches[0].clientY - touches[1].clientY;
-    return Math.sqrt(dx*dx + dy*dy);
-  }
-
-  function zoomBy(delta) {
-    const newScale = Math.max(cropState.minScale, Math.min(cropState.minScale * 4, cropState.scale * (1 + delta)));
-    const { w: sw, h: sh } = stageSizeFallback();
-    const cx = sw / 2, cy = sh / 2;
-    const ratio = newScale / cropState.scale;
-    cropState.x = cx - (cx - cropState.x) * ratio;
-    cropState.y = cy - (cy - cropState.y) * ratio;
-    cropState.scale = newScale;
-    clampPan();
-    applyCropTransform();
-  }
-
-  document.querySelectorAll('.crop-aspect-btn').forEach(btn => {
-    btn.onclick = () => setCropRatio(parseFloat(btn.dataset.ratio));
-  });
-
-  document.getElementById('crop-cancel').onclick = () => { cropModal.classList.remove('open'); };
-  cropModal.addEventListener('click', e => { if (e.target === cropModal) cropModal.classList.remove('open'); });
-
-  document.getElementById('crop-confirm').onclick = () => {
-    const { w: sw, h: sh } = stageSizeFallback();
-    // The visible stage area represents the crop viewport (square container).
-    // We export based on ratio: for square, export sw x sh; for other ratios we
-    // crop within the square viewport's centered rect matching ratio.
-    let cropW = sw, cropH = sh;
-    if (cropState.ratio < 1) { cropW = sh * cropState.ratio; }
-    else if (cropState.ratio > 1) { cropH = sw / cropState.ratio; }
-    const offsetX = (sw - cropW) / 2;
-    const offsetY = (sh - cropH) / 2;
-
-    const maxOutDim = 1600;
-    let outW = cropW, outH = cropH;
-    const scaleDown = Math.min(1, maxOutDim / Math.max(outW, outH));
-    outW = Math.round(outW * scaleDown);
-    outH = Math.round(outH * scaleDown);
-
-    const canvas = document.createElement('canvas');
-    canvas.width = outW;
-    canvas.height = outH;
-    const ctx = canvas.getContext('2d');
-
-    // source rect in natural image coordinates
-    const srcX = (offsetX - cropState.x) / cropState.scale;
-    const srcY = (offsetY - cropState.y) / cropState.scale;
-    const srcW = cropW / cropState.scale;
-    const srcH = cropH / cropState.scale;
-
-    ctx.drawImage(cropState.img, srcX, srcY, srcW, srcH, 0, 0, outW, outH);
-    pendingPhotoDataUrl = canvas.toDataURL('image/jpeg', 0.82);
-
-    const drop = document.getElementById('photo-drop');
-    drop.innerHTML = `<img src="${pendingPhotoDataUrl}" alt="">`;
-    updateSubmitState();
-    cropModal.classList.remove('open');
-  };
 
   // ---------- mention chips ----------
   const mentionInput = document.getElementById('mention-input');
