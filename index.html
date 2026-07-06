@@ -1387,7 +1387,7 @@ function startKaniMemoryApp() {
     if (!el) return;
     let startY = null;
     let pulling = false;
-    const THRESHOLD = 70;
+    const THRESHOLD = 100;
 
     function isTimelineActive() {
       return document.getElementById('view-timeline').classList.contains('active');
@@ -1405,7 +1405,7 @@ function startKaniMemoryApp() {
       const diff = e.touches[0].clientY - startY;
       if (diff > 0 && window.scrollY <= 2) {
         pulling = true;
-        const capped = Math.min(diff * 0.5, 90);
+        const capped = Math.min(diff * 0.35, 120);
         el.classList.add('dragging');
         el.style.height = capped + 'px';
         label.textContent = capped > THRESHOLD ? 'はなすと更新' : 'ひっぱって更新';
