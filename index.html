@@ -1261,6 +1261,18 @@
       });
       return { items, shared: true };
     },
+    async getAll() {
+      // Fetch the entire collection in a single round-trip.
+      // Used at app boot so we don't repeat this call once per data type.
+      const colRef = collection(db, 'kani_data');
+      const snap = await getDocs(colRef);
+      const items = [];
+      snap.forEach(d => {
+        const originalKey = d.id.replace(/__SLASH__/g, '/');
+        items.push({ key: originalKey, value: d.data().value });
+      });
+      return { items, shared: true };
+    },
     async delete(key) {
       const ref = doc(db, 'kani_data', sanitizeDocId(key));
       await deleteDoc(ref);
@@ -1383,6 +1395,14 @@ function startKaniMemoryApp() {
     }
     catch (e) { return []; }
   }
+  async function safeGetAll() {
+    try {
+      await waitForKaniStorage();
+      const r = await window.kaniStorage.getAll();
+      return r ? r.items : [];
+    }
+    catch (e) { return []; }
+  }
   async function safeDelete(key) {
     try {
       await waitForKaniStorage();
@@ -1444,11 +1464,12 @@ function startKaniMemoryApp() {
     mainUI.style.display = 'block';
     tabbarNav.style.display = 'flex';
 
-    await registerParticipant(myName);
-    await loadParticipants();
-    await loadProfiles();
-    await loadFavorites();
-    await loadEntries();
+    // Don't block the first render on this — loadAllRoomData already treats
+    // "myName" as a participant locally, so the UI can show up immediately
+    // while the registration write happens in the background.
+    registerParticipant(myName);
+
+    await loadAllRoomData();
     currentProfileTarget = myName;
     renderProfileHeader();
     renderProfileParticipants();
@@ -1565,47 +1586,86 @@ function startKaniMemoryApp() {
   }
 
   // ---------- entries ----------
-  async function loadEntries() {
+  // Renders whatever is currently in `entries` / `commentsByEntry` without re-fetching.
+  function renderAllViews() {
+    buildTagBar();
+    renderTimeline();
+    renderCalendarGrid();
+    updateTabUnreadBadge();
+    if (document.getElementById('view-profile').classList.contains('active')) renderProfileGrid();
+  }
+
+  // Single round-trip loader used at boot: fetches the whole room's data once,
+  // then fans it out into participants / profiles / favorites / entries / comments.
+  // This replaces what used to be 5+ separate sequential Firestore round-trips.
+  async function loadAllRoomData() {
     const timeline = document.getElementById('timeline');
     timeline.innerHTML = '<div class="loading-dots"><span></span><span></span><span></span></div>';
 
     try {
-      const items = await safeListWithValues(k('entries:'));
-      const loaded = [];
-      for (const item of items) {
-        if (!item.value) continue;
-        try { loaded.push(JSON.parse(item.value)); } catch (e) {}
-      }
-      loaded.sort((a, b) => b.createdAt - a.createdAt);
-      entries = loaded;
+      const allItems = await safeGetAll();
+      const roomPrefix = room + ':';
+      const relevant = allItems.filter(item => item.key.startsWith(roomPrefix));
 
-      // Pre-fetch all comments in one pass so we can compute unread badges
-      // without opening every comment thread individually.
-      const commentItems = await safeListWithValues(k('comments:'));
+      // participants
+      const participantsItem = relevant.find(item => item.key === k('participants'));
+      try { participants = participantsItem ? JSON.parse(participantsItem.value) : []; } catch (e) { participants = []; }
+      if (!participants.includes(myName)) participants.push(myName);
+
+      // profiles
+      profiles = {};
+      relevant.forEach(item => {
+        const prefix = k('profile:');
+        if (item.key.startsWith(prefix)) {
+          const name = item.key.slice(prefix.length);
+          try { profiles[name] = JSON.parse(item.value); } catch (e) {}
+        }
+      });
+
+      // favorites (mine only)
+      const favItem = relevant.find(item => item.key === k('favorites:' + myName));
+      try { favorites = favItem ? JSON.parse(favItem.value) : []; } catch (e) { favorites = []; }
+
+      // entries
+      const entryPrefix = k('entries:');
+      const loadedEntries = [];
+      relevant.forEach(item => {
+        if (item.key.startsWith(entryPrefix)) {
+          try { loadedEntries.push(JSON.parse(item.value)); } catch (e) {}
+        }
+      });
+      loadedEntries.sort((a, b) => b.createdAt - a.createdAt);
+      entries = loadedEntries;
+
+      // comments, grouped by entry id
+      const commentPrefix = k('comments:');
       const grouped = {};
-      for (const item of commentItems) {
-        if (!item.value) continue;
-        // key format: entries... no wait, comments:<entryId>:<commentId>
-        const withoutRoomPrefix = item.key.slice(k('comments:').length); // "<entryId>:<commentId>"
-        const entryId = withoutRoomPrefix.split(':')[0];
-        if (!entryId) continue;
-        let parsed;
-        try { parsed = JSON.parse(item.value); } catch (e) { continue; }
-        if (!grouped[entryId]) grouped[entryId] = [];
-        grouped[entryId].push(parsed);
-      }
+      relevant.forEach(item => {
+        if (item.key.startsWith(commentPrefix)) {
+          const withoutPrefix = item.key.slice(commentPrefix.length); // "<entryId>:<commentId>"
+          const entryId = withoutPrefix.split(':')[0];
+          if (!entryId) return;
+          let parsed;
+          try { parsed = JSON.parse(item.value); } catch (e) { return; }
+          if (!grouped[entryId]) grouped[entryId] = [];
+          grouped[entryId].push(parsed);
+        }
+      });
       Object.keys(grouped).forEach(eid => grouped[eid].sort((a, b) => a.createdAt - b.createdAt));
       commentsByEntry = grouped;
 
-      buildTagBar();
-      renderTimeline();
-      renderCalendarGrid();
-      updateTabUnreadBadge();
-      if (document.getElementById('view-profile').classList.contains('active')) renderProfileGrid();
+      renderAllViews();
     } catch (e) {
       timeline.innerHTML = `<div class="empty-state"><p style="color:#c94326; font-weight:bold;">読み込みエラー</p><p style="word-break:break-all; font-size:11px; margin-top:8px;">${escapeHtml(e && e.message ? e.message : String(e))}</p></div>`;
-      console.error('loadEntries failed:', e);
+      console.error('loadAllRoomData failed:', e);
     }
+  }
+
+  // Kept as a lighter-weight refresh (e.g. pull-to-refresh, after posting/deleting)
+  // that re-fetches everything the same way as boot, since Firestore doesn't charge
+  // extra for re-reading the whole small collection at this scale.
+  async function loadEntries() {
+    await loadAllRoomData();
   }
 
   function hasUnreadComments(entryId) {
