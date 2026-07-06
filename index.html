@@ -1,0 +1,2077 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>カニメモリー</title>
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  input, textarea { -webkit-user-select: text; user-select: text; }
+
+  html, body {
+    height: 100%;
+    overscroll-behavior: none;
+  }
+
+  body {
+    font-family: 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Meiryo', sans-serif;
+    background: #fbf6ec;
+    color: #33291a;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+  }
+
+  :root {
+    --navy-deep: #fbf6ec;
+    --navy: #ffffff;
+    --navy-panel: #ffffff;
+    --navy-panel-2: #fffdf8;
+    --navy-line: #e6dcc6;
+    --navy-line-soft: #efe7d6;
+    --ink: #33291a;
+    --ink-dim: #8a7a5c;
+    --ink-dimmer: #b3a583;
+    --crab: #ff6b52;
+    --crab-deep: #c94326;
+    --crab-glow: #ff9478;
+    --sea: #2a95a8;
+    --sea-deep: #1c6e7d;
+    --gold: #d99a2b;
+    --gold-deep: #b47f1f;
+  }
+
+  #app {
+    width: 100%;
+    max-width: 480px;
+    min-height: 100vh;
+    background:
+      radial-gradient(ellipse 500px 300px at 15% -5%, #fdeecb 0%, transparent 60%),
+      radial-gradient(ellipse 400px 260px at 100% 15%, #fde3d6 0%, transparent 55%),
+      var(--navy-deep);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  #app::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    max-width: 480px;
+    margin: 0 auto;
+    pointer-events: none;
+    z-index: 999;
+    background-image: radial-gradient(rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 3px 3px;
+    opacity: 0.6;
+  }
+
+  /* ---------- pixel crab icon ---------- */
+  .crab-pixel {
+    display: inline-grid;
+    grid-template-columns: repeat(9, 1fr);
+    grid-template-rows: repeat(7, 1fr);
+    gap: 1px;
+    flex: none;
+  }
+  .crab-pixel span { background: transparent; border-radius: 1px; }
+  .crab-pixel span.c1 { background: var(--crab); }
+  .crab-pixel span.c2 { background: var(--crab-deep); }
+  .crab-pixel span.eye { background: #10182c; }
+
+  /* ---------- Header ---------- */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 16px 10px;
+    position: sticky;
+    top: 0;
+    z-index: 60;
+    background: linear-gradient(180deg, var(--navy-deep) 65%, transparent);
+    backdrop-filter: blur(6px);
+  }
+
+  .logo-block {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+  }
+  .logo-block .crab-pixel { width: 26px; height: 20px; }
+  .logo-text {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--ink);
+  }
+  .logo-text small {
+    display: block;
+    font-size: 8px;
+    color: var(--ink-dimmer);
+    font-weight: 400;
+    letter-spacing: 0.15em;
+    margin-top: 1px;
+  }
+
+  .icon-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: var(--navy-panel);
+    border: 1px solid var(--navy-line-soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 0 rgba(30,50,100,0.12), inset 0 1px 0 rgba(255,255,255,0.7);
+    color: var(--ink-dim);
+    position: relative;
+  }
+  .icon-btn:active { transform: translateY(1px); box-shadow: 0 1px 0 rgba(30,50,100,0.12); }
+
+  .header-actions { display: flex; gap: 8px; }
+
+  /* ---------- corner focus-frame decoration (from reference image) ---------- */
+  .focus-frame {
+    position: relative;
+  }
+  .focus-frame::before, .focus-frame::after,
+  .focus-frame .fc-tl, .focus-frame .fc-br { content: none; }
+  .fcorner {
+    position: absolute;
+    width: 9px;
+    height: 9px;
+    border-color: var(--sea);
+    opacity: 0.85;
+  }
+  .fcorner.tl { top: -3px; left: -3px; border-top: 2px solid; border-left: 2px solid; border-radius: 3px 0 0 0; }
+  .fcorner.tr { top: -3px; right: -3px; border-top: 2px solid; border-right: 2px solid; border-radius: 0 3px 0 0; }
+  .fcorner.bl { bottom: -3px; left: -3px; border-bottom: 2px solid; border-left: 2px solid; border-radius: 0 0 0 3px; }
+  .fcorner.br { bottom: -3px; right: -3px; border-bottom: 2px solid; border-right: 2px solid; border-radius: 0 0 3px 0; }
+
+  /* ---------- Tab bar (d-pad inspired segmented control) ---------- */
+  .tabbar {
+    display: flex;
+    margin: 4px 16px 14px;
+    background: var(--navy-panel);
+    border: 1px solid var(--navy-line-soft);
+    border-radius: 14px;
+    padding: 4px;
+    box-shadow: inset 0 2px 6px rgba(30,50,100,0.12);
+    gap: 4px;
+  }
+  .tab-btn {
+    flex: 1;
+    text-align: center;
+    padding: 10px 0;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ink-dim);
+    letter-spacing: 0.03em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: color .15s ease;
+  }
+  .tab-btn.active {
+    background: linear-gradient(180deg, var(--navy-panel-2), #1a2745);
+    color: var(--sea);
+    box-shadow: 0 2px 0 rgba(30,50,100,0.14), inset 0 1px 0 rgba(255,255,255,0.7), 0 0 0 1px var(--navy-line);
+  }
+  .tab-btn svg { width: 15px; height: 15px; }
+
+  /* ---------- Tag filter row ---------- */
+  .tagbar {
+    display: flex;
+    gap: 8px;
+    padding: 2px 16px 14px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .tagbar::-webkit-scrollbar { display: none; }
+
+  .tag-chip {
+    flex: none;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 7px 14px;
+    border-radius: 20px;
+    background: var(--navy-panel);
+    border: 1px solid var(--navy-line-soft);
+    color: var(--ink-dim);
+    white-space: nowrap;
+    box-shadow: 0 2px 0 rgba(30,50,100,0.10);
+  }
+  .tag-chip.active {
+    background: linear-gradient(180deg, var(--crab-glow), var(--crab));
+    color: #2a0d05;
+    border-color: var(--crab-deep);
+    box-shadow: 0 2px 0 var(--crab-deep);
+  }
+
+  /* ---------- Calendar strip ---------- */
+  .calendar-strip {
+    margin: 0 16px 14px;
+    background: var(--navy-panel);
+    border: 1px solid var(--navy-line-soft);
+    border-radius: 14px;
+    padding: 12px 14px 14px;
+    box-shadow: 0 3px 0 rgba(30,50,100,0.10), inset 0 1px 0 rgba(255,255,255,0.6);
+  }
+  .cal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .cal-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ink);
+    letter-spacing: 0.04em;
+  }
+  .cal-nav { display: flex; gap: 6px; }
+  .cal-nav button {
+    width: 26px; height: 26px;
+    border-radius: 7px;
+    background: var(--navy-deep);
+    border: 1px solid var(--navy-line-soft);
+    color: var(--sea);
+    font-size: 11px;
+  }
+  .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+  }
+  .cal-dow {
+    text-align: center;
+    font-size: 9px;
+    color: var(--ink-dimmer);
+    padding-bottom: 4px;
+  }
+  .cal-day {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    border-radius: 7px;
+    color: var(--ink-dim);
+    position: relative;
+  }
+  .cal-day.has-entry { color: var(--ink); font-weight: 700; }
+  .cal-day.has-entry::after {
+    content: '';
+    position: absolute;
+    bottom: 3px;
+    width: 4px; height: 4px;
+    background: var(--crab);
+    border-radius: 1px;
+  }
+  .cal-day.selected {
+    background: linear-gradient(180deg, var(--sea), var(--sea-deep));
+    color: #06222b;
+    box-shadow: 0 2px 0 var(--sea-deep);
+  }
+  .cal-day.empty { visibility: hidden; }
+  .cal-clear {
+    text-align: center;
+    font-size: 10px;
+    color: var(--ink-dimmer);
+    margin-top: 8px;
+  }
+
+  /* ---------- Timeline ---------- */
+  .view { display: none; flex: 1; }
+  .view.active { display: flex; flex-direction: column; }
+
+  .timeline {
+    flex: 1;
+    padding: 4px 16px 130px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 70px 24px;
+    color: var(--ink-dimmer);
+  }
+  .empty-state .crab-pixel { width: 70px; height: 55px; margin: 0 auto 18px; }
+  .empty-state p { font-size: 12px; line-height: 1.9; }
+
+  /* ---------- Card: raised game-cartridge feel ---------- */
+  .card {
+    background: linear-gradient(155deg, var(--navy-panel-2) 0%, var(--navy-panel) 100%);
+    border-radius: 16px;
+    overflow: hidden;
+    position: relative;
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.6) inset,
+      0 4px 0 #d3ddf0,
+      0 10px 22px rgba(30,50,100,0.12);
+    border: 1px solid var(--navy-line);
+    animation: pop-in .35s ease both;
+  }
+  @keyframes pop-in {
+    from { opacity: 0; transform: translateY(10px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .card-photo-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4/3;
+    background: #f1ece0;
+    overflow: hidden;
+    border-bottom: 1px solid var(--navy-line);
+  }
+  .card-photo-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .card-photo-wrap::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    box-shadow: inset 0 -30px 30px -20px rgba(30,50,100,0.16);
+    pointer-events: none;
+  }
+
+  .card-date-tag {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    font-size: 10px;
+    font-weight: 700;
+    background: rgba(13,21,38,0.8);
+    color: var(--sea);
+    padding: 5px 10px;
+    border-radius: 8px;
+    letter-spacing: 0.03em;
+    border: 1px solid rgba(94,207,224,0.35);
+    z-index: 2;
+  }
+
+  .fav-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    background: rgba(13,21,38,0.75);
+    border: 1px solid rgba(255,255,255,0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+  }
+  .fav-btn svg { width: 17px; height: 17px; }
+  .fav-btn:active { transform: scale(0.92); }
+
+  .card-body { padding: 14px 16px 16px; }
+
+  .card-author-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 9px;
+  }
+  .avatar-tile {
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+    background: linear-gradient(155deg, var(--sea), var(--sea-deep));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 800;
+    color: #06222b;
+    flex: none;
+    box-shadow: 0 2px 0 var(--sea-deep);
+    overflow: hidden;
+  }
+  .avatar-tile img { width: 100%; height: 100%; object-fit: cover; }
+  .card-author {
+    font-size: 12px;
+    color: var(--sea);
+    font-weight: 700;
+  }
+
+  .card-caption {
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--ink);
+    margin-bottom: 10px;
+    word-break: break-word;
+  }
+
+  .card-mentions, .card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .mention-chip {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--gold);
+    background: #2a2340;
+    border: 1px solid #4a3f66;
+    padding: 3px 9px;
+    border-radius: 8px;
+  }
+  .card-tag-el {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--ink-dim);
+    background: var(--navy-deep);
+    border: 1px solid var(--navy-line-soft);
+    padding: 3px 8px;
+    border-radius: 6px;
+  }
+
+  .card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 1px dashed var(--navy-line-soft);
+    padding-top: 10px;
+  }
+  .comment-toggle {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ink-dimmer);
+    background: none;
+    border: none;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .comment-section { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--navy-line-soft); display: none; }
+  .comment-section.open { display: block; }
+  .comment-item { font-size: 12px; color: var(--ink); margin-bottom: 8px; line-height: 1.6; }
+  .comment-item b { color: var(--sea); }
+
+  .comment-input-row { display: flex; gap: 6px; margin-top: 6px; }
+  .comment-input-row input {
+    flex: 1;
+    background: var(--navy-deep);
+    border: 1px solid var(--navy-line-soft);
+    border-radius: 8px;
+    padding: 9px 10px;
+    font-size: 12px;
+    color: var(--ink);
+  }
+  .comment-input-row input:focus { outline: none; border-color: var(--sea); }
+  .comment-input-row button {
+    background: linear-gradient(180deg, var(--sea), var(--sea-deep));
+    color: #06222b;
+    border: none;
+    border-radius: 8px;
+    padding: 0 14px;
+    font-size: 12px;
+    font-weight: 700;
+    box-shadow: 0 2px 0 var(--sea-deep);
+  }
+  .comment-input-row button:active { transform: translateY(1px); box-shadow: none; }
+
+  /* ---------- Profile view ---------- */
+  .profile-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 6px 16px 18px;
+  }
+  .profile-avatar-big {
+    width: 78px;
+    height: 78px;
+    border-radius: 20px;
+    background: linear-gradient(155deg, var(--sea), var(--sea-deep));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 30px;
+    font-weight: 800;
+    color: #06222b;
+    box-shadow: 0 5px 0 var(--sea-deep), 0 10px 20px rgba(30,50,100,0.14);
+    overflow: hidden;
+    position: relative;
+    margin-bottom: 10px;
+  }
+  .profile-avatar-big img { width: 100%; height: 100%; object-fit: cover; }
+  .profile-avatar-edit {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+    background: var(--crab);
+    border: 2px solid var(--navy-deep);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+  }
+  .profile-name { font-size: 16px; font-weight: 800; color: var(--ink); margin-bottom: 4px; }
+  .profile-sub { font-size: 11px; color: var(--ink-dimmer); }
+
+  .profile-participants {
+    display: flex;
+    gap: 8px;
+    padding: 0 16px 14px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .profile-participants::-webkit-scrollbar { display: none; }
+  .participant-chip {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px 6px 6px;
+    border-radius: 20px;
+    background: var(--navy-panel);
+    border: 1px solid var(--navy-line-soft);
+    box-shadow: 0 2px 0 rgba(30,50,100,0.10);
+  }
+  .participant-chip.active { border-color: var(--crab); box-shadow: 0 2px 0 var(--crab-deep); }
+  .participant-chip .mini-avatar {
+    width: 20px; height: 20px;
+    border-radius: 6px;
+    background: linear-gradient(155deg, var(--sea), var(--sea-deep));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; font-weight: 800; color: #06222b;
+    overflow: hidden;
+  }
+  .participant-chip .mini-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .participant-chip span.pname { font-size: 11px; font-weight: 600; color: var(--ink-dim); }
+  .participant-chip.active span.pname { color: var(--ink); }
+
+  .profile-subtabs {
+    display: flex;
+    gap: 6px;
+    padding: 0 16px 12px;
+  }
+  .subtab-btn {
+    flex: 1;
+    text-align: center;
+    padding: 9px 0;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--ink-dim);
+    background: var(--navy-panel);
+    border: 1px solid var(--navy-line-soft);
+    border-radius: 10px;
+    box-shadow: 0 2px 0 rgba(30,50,100,0.10);
+  }
+  .subtab-btn.active {
+    color: var(--crab);
+    border-color: var(--crab-deep);
+    box-shadow: 0 2px 0 var(--crab-deep);
+  }
+
+  .grid-photos {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+    padding: 0 16px 130px;
+  }
+  .grid-photo {
+    aspect-ratio: 1;
+    background: #f1ece0;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid var(--navy-line-soft);
+    position: relative;
+  }
+  .grid-photo img { width: 100%; height: 100%; object-fit: cover; }
+  .grid-photo .grid-fav {
+    position: absolute; top: 4px; right: 4px;
+    width: 16px; height: 16px;
+  }
+  .grid-photo .grid-fav svg { width: 100%; height: 100%; }
+
+  /* ---------- FAB ---------- */
+  .fab-wrap {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    display: flex;
+    justify-content: center;
+    max-width: 480px;
+    margin: 0 auto;
+    z-index: 100;
+    pointer-events: none;
+    padding-bottom: 24px;
+  }
+  .fab {
+    width: 60px; height: 60px;
+    border-radius: 18px;
+    background: linear-gradient(155deg, var(--crab-glow), var(--crab));
+    border: none;
+    box-shadow: 0 6px 0 var(--crab-deep), 0 14px 26px rgba(30,50,100,0.14);
+    display: flex; align-items: center; justify-content: center;
+    pointer-events: all;
+    transition: transform .1s ease;
+  }
+  .fab:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--crab-deep); }
+  .fab svg { width: 26px; height: 26px; }
+
+  /* ---------- Modal ---------- */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(6,10,20,0.78);
+    z-index: 200;
+    display: none;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-overlay.center { align-items: center; }
+
+  .modal-sheet {
+    width: 100%;
+    max-width: 480px;
+    background: linear-gradient(160deg, var(--navy-panel-2), var(--navy-panel));
+    border-radius: 22px 22px 0 0;
+    padding: 20px 20px 28px;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: slide-up .25s ease;
+    border-top: 1px solid var(--navy-line);
+    box-shadow: 0 -10px 30px rgba(30,50,100,0.16);
+  }
+  .modal-sheet.center-sheet {
+    border-radius: 18px;
+    animation: pop-in .2s ease;
+    max-width: 400px;
+  }
+  @keyframes slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+  .modal-title {
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--ink);
+    letter-spacing: 0.05em;
+    margin-bottom: 18px;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .field-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--sea);
+    margin-bottom: 7px;
+    display: block;
+  }
+  .field { margin-bottom: 16px; }
+
+  .text-input, .textarea-input {
+    width: 100%;
+    background: var(--navy-deep);
+    border: 1px solid var(--navy-line-soft);
+    border-radius: 10px;
+    padding: 12px 13px;
+    font-size: 14px;
+    color: var(--ink);
+    font-family: inherit;
+    box-shadow: inset 0 2px 4px rgba(30,50,100,0.10);
+  }
+  .text-input:focus, .textarea-input:focus { outline: none; border-color: var(--sea); }
+  .textarea-input { resize: none; min-height: 70px; line-height: 1.6; }
+
+  .photo-drop {
+    width: 100%;
+    aspect-ratio: 4/3;
+    border: 2px dashed var(--navy-line);
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: var(--ink-dimmer);
+    font-size: 12px;
+    background: var(--navy-deep);
+    overflow: hidden;
+    position: relative;
+  }
+  .photo-drop img { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
+  .photo-drop input { display: none; }
+
+  .chip-input-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    background: var(--navy-deep);
+    border: 1px solid var(--navy-line-soft);
+    border-radius: 10px;
+    padding: 8px 10px;
+    min-height: 46px;
+    align-items: center;
+    box-shadow: inset 0 2px 4px rgba(30,50,100,0.10);
+  }
+  .chip-input-wrap input {
+    flex: 1; min-width: 60px;
+    background: none; border: none;
+    color: var(--ink); font-size: 13px; font-family: inherit;
+  }
+  .chip-input-wrap input:focus { outline: none; }
+
+  .removable-chip {
+    font-size: 11px; font-weight: 600;
+    padding: 5px 8px;
+    border-radius: 7px;
+    display: flex; align-items: center; gap: 5px;
+    white-space: nowrap;
+  }
+  .removable-chip.tag { background: var(--navy); color: var(--ink-dim); border: 1px solid var(--navy-line-soft); }
+  .removable-chip.mention { background: #2a2340; color: var(--gold); border: 1px solid #4a3f66; }
+  .removable-chip button { background: none; border: none; color: inherit; font-size: 12px; line-height: 1; opacity: 0.7; }
+
+  .suggestion-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .suggestion-chip {
+    font-size: 11px; font-weight: 600;
+    padding: 5px 10px; border-radius: 7px;
+    background: var(--navy); border: 1px solid var(--navy-line-soft);
+    color: var(--sea);
+  }
+
+  .btn-primary {
+    width: 100%;
+    background: linear-gradient(180deg, var(--crab-glow), var(--crab));
+    color: #2a0d05;
+    border: none;
+    border-radius: 14px;
+    padding: 15px;
+    font-size: 14px;
+    font-weight: 800;
+    box-shadow: 0 5px 0 var(--crab-deep);
+    margin-top: 4px;
+  }
+  .btn-primary:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--crab-deep); }
+  .btn-primary:disabled { opacity: 0.35; box-shadow: none; }
+
+  .btn-secondary {
+    width: 100%;
+    background: none;
+    color: var(--ink-dimmer);
+    border: none;
+    padding: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-top: 4px;
+  }
+
+  .close-x {
+    position: absolute;
+    top: 16px; right: 16px;
+    width: 30px; height: 30px;
+    border-radius: 9px;
+    background: var(--navy-deep);
+    border: 1px solid var(--navy-line-soft);
+    color: var(--ink-dim);
+    font-size: 14px;
+    box-shadow: 0 2px 0 rgba(30,50,100,0.10);
+  }
+
+  /* ---------- Search modal ---------- */
+  .search-tag-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .search-tag-item {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 8px 14px;
+    border-radius: 10px;
+    background: var(--navy-deep);
+    border: 1px solid var(--navy-line-soft);
+    color: var(--ink-dim);
+    box-shadow: 0 2px 0 rgba(30,50,100,0.10);
+  }
+  .search-tag-item.selected {
+    background: linear-gradient(180deg, var(--crab-glow), var(--crab));
+    color: #2a0d05;
+    border-color: var(--crab-deep);
+    box-shadow: 0 2px 0 var(--crab-deep);
+  }
+  .search-empty {
+    font-size: 12px;
+    color: var(--ink-dimmer);
+    text-align: center;
+    padding: 20px 0;
+  }
+
+  /* ---------- Cropper modal ---------- */
+  .crop-stage {
+    width: 100%;
+    aspect-ratio: 1;
+    background: #f1ece0;
+    border-radius: 14px;
+    overflow: hidden;
+    position: relative;
+    touch-action: none;
+    margin-bottom: 14px;
+    border: 1px solid var(--navy-line);
+  }
+  .crop-stage img {
+    position: absolute;
+    max-width: none;
+    max-height: none;
+    transform-origin: 0 0;
+    will-change: transform;
+  }
+  .crop-hint {
+    font-size: 10px;
+    color: var(--ink-dimmer);
+    text-align: center;
+    margin-bottom: 14px;
+  }
+  .crop-aspect-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .crop-aspect-btn {
+    flex: 1;
+    text-align: center;
+    padding: 9px 0;
+    font-size: 11px;
+    font-weight: 700;
+    background: var(--navy-deep);
+    border: 1px solid var(--navy-line-soft);
+    border-radius: 9px;
+    color: var(--ink-dim);
+  }
+  .crop-aspect-btn.active { color: var(--sea); border-color: var(--sea-deep); box-shadow: 0 2px 0 var(--sea-deep); }
+
+  /* ---------- Login gate ---------- */
+  .gate {
+    position: fixed; inset: 0;
+    max-width: 480px; margin: 0 auto;
+    background: var(--navy-deep);
+    z-index: 500;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 32px; text-align: center;
+  }
+  .gate .crab-pixel { width: 100px; height: 78px; margin-bottom: 22px; }
+  .gate h1 { font-size: 22px; font-weight: 800; color: var(--ink); letter-spacing: 0.06em; margin-bottom: 10px; }
+  .gate p { font-size: 12px; color: var(--ink-dim); line-height: 1.8; margin-bottom: 26px; }
+  .gate .text-input { text-align: center; letter-spacing: 0.1em; margin-bottom: 12px; }
+  .gate-error { font-size: 11px; color: #ff9d9d; margin-bottom: 8px; min-height: 14px; }
+
+  .loading-dots { display: flex; gap: 5px; justify-content: center; padding: 40px 0; }
+  .loading-dots span { width: 7px; height: 7px; background: var(--sea); border-radius: 2px; animation: blink 1.1s infinite ease-in-out; }
+  .loading-dots span:nth-child(2) { animation-delay: .15s; }
+  .loading-dots span:nth-child(3) { animation-delay: .3s; }
+  @keyframes blink { 0%,80%,100%{opacity:.25} 40%{opacity:1} }
+
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- Login Gate -->
+  <div class="gate" id="gate">
+    <div class="crab-pixel" id="gate-crab"></div>
+    <h1>カニメモリー</h1>
+    <p>合言葉を入れてね<br>はじめての場合は好きな合言葉を決めてね</p>
+    <input type="password" class="text-input" id="gate-passcode" placeholder="合言葉" autocomplete="off">
+    <div class="gate-error" id="gate-error"></div>
+    <button class="btn-primary" id="gate-enter">はいる</button>
+  </div>
+
+  <div class="gate" id="name-gate" style="display:none;">
+    <div class="crab-pixel" id="name-crab"></div>
+    <h1>なまえ</h1>
+    <p>これから投稿に表示される名前だよ</p>
+    <input type="text" class="text-input" id="name-input" placeholder="なまえ" maxlength="10">
+    <div class="gate-error" id="name-error"></div>
+    <button class="btn-primary" id="name-enter">はじめる</button>
+  </div>
+
+  <!-- Main UI -->
+  <div id="main-ui" style="display:none;">
+    <div class="topbar">
+      <div class="logo-block">
+        <div class="crab-pixel" id="logo-crab"></div>
+        <div class="logo-text">カニメモリー<small>KANI MEMORY</small></div>
+      </div>
+      <div class="header-actions">
+        <button class="icon-btn focus-frame" id="open-calendar">
+          <span class="fcorner tl"></span><span class="fcorner tr"></span><span class="fcorner bl"></span><span class="fcorner br"></span>
+          <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M3 9H21M8 3V6M16 3V6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        </button>
+        <button class="icon-btn" id="open-search">
+          <svg viewBox="0 0 24 24" fill="none"><circle cx="10.5" cy="10.5" r="6.5" stroke="currentColor" stroke-width="1.7"/><path d="M20 20L15 15" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="tabbar">
+      <div class="tab-btn active" data-view="timeline">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M3 12H21M3 6H21M3 18H14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        タイムライン
+      </div>
+      <div class="tab-btn" data-view="profile">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.5" stroke="currentColor" stroke-width="2"/><path d="M4.5 20C5.5 16 8.5 14 12 14C15.5 14 18.5 16 19.5 20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        プロフィール
+      </div>
+    </div>
+
+    <!-- Timeline view -->
+    <div class="view active" id="view-timeline">
+      <div class="tagbar" id="tagbar">
+        <div class="tag-chip active" data-tag="__all__">すべて</div>
+      </div>
+      <div class="timeline" id="timeline">
+        <div class="loading-dots"><span></span><span></span><span></span></div>
+      </div>
+    </div>
+
+    <!-- Profile view -->
+    <div class="view" id="view-profile">
+      <div class="profile-header">
+        <div class="profile-avatar-big" id="profile-avatar-big">
+          <span id="profile-avatar-initial">?</span>
+          <div class="profile-avatar-edit" id="profile-avatar-edit">✎</div>
+        </div>
+        <div class="profile-name" id="profile-name-display">-</div>
+        <div class="profile-sub" id="profile-sub">じぶんのきろく</div>
+      </div>
+      <div class="profile-participants" id="profile-participants"></div>
+      <div class="profile-subtabs">
+        <div class="subtab-btn active" data-sub="posts">とうこう</div>
+        <div class="subtab-btn" data-sub="favorites">お気に入り</div>
+      </div>
+      <div class="grid-photos" id="profile-grid"></div>
+    </div>
+  </div>
+
+  <div class="fab-wrap" id="fab-wrap" style="display:none;">
+    <button class="fab" id="open-post-modal">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M12 5V19M5 12H19" stroke="#2a0d05" stroke-width="3" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+
+  <!-- New Post Modal -->
+  <div class="modal-overlay" id="post-modal">
+    <div class="modal-sheet">
+      <button class="close-x" id="close-post-modal">✕</button>
+      <div class="modal-title">おもいでをのこす</div>
+
+      <div class="field">
+        <span class="field-label">しゃしん</span>
+        <div class="photo-drop" id="photo-drop">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="14" rx="2" stroke="#55648f" stroke-width="1.6"/><circle cx="8.5" cy="11" r="1.5" fill="#55648f"/><path d="M3 17L8 13L12 16L16 12L21 17" stroke="#55648f" stroke-width="1.6"/></svg>
+          <span id="photo-drop-label">タップしてえらぶ</span>
+          <input type="file" accept="image/*" id="photo-input">
+        </div>
+      </div>
+
+      <div class="field">
+        <span class="field-label">ひとこと</span>
+        <textarea class="textarea-input" id="caption-input" maxlength="140" placeholder="今日はね..."></textarea>
+      </div>
+
+      <div class="field">
+        <span class="field-label">いっしょにいたひと（@でよぶ）</span>
+        <div class="chip-input-wrap" id="mention-wrap">
+          <input type="text" id="mention-input" placeholder="@なまえ">
+        </div>
+        <div class="suggestion-list" id="mention-suggestions"></div>
+      </div>
+
+      <div class="field">
+        <span class="field-label">タグ</span>
+        <div class="chip-input-wrap" id="tag-wrap">
+          <input type="text" id="tag-input" placeholder="#タグ">
+        </div>
+      </div>
+
+      <button class="btn-primary" id="submit-post" disabled>のこす</button>
+    </div>
+  </div>
+
+  <!-- Crop Modal -->
+  <div class="modal-overlay center" id="crop-modal">
+    <div class="modal-sheet center-sheet">
+      <div class="modal-title">写真の位置を調整</div>
+      <div class="crop-aspect-row">
+        <div class="crop-aspect-btn active" data-ratio="1">正方形</div>
+        <div class="crop-aspect-btn" data-ratio="0.8">縦長</div>
+        <div class="crop-aspect-btn" data-ratio="1.25">横長</div>
+      </div>
+      <div class="crop-stage" id="crop-stage">
+        <img id="crop-image" src="" alt="">
+      </div>
+      <div class="crop-hint">ドラッグで位置調整・指2本でひろげると拡大</div>
+      <button class="btn-primary" id="crop-confirm">この写真にする</button>
+      <button class="btn-secondary" id="crop-cancel">選びなおす</button>
+    </div>
+  </div>
+
+  <!-- Search Modal -->
+  <div class="modal-overlay" id="search-modal">
+    <div class="modal-sheet">
+      <button class="close-x" id="close-search-modal">✕</button>
+      <div class="modal-title">🔍 タグでさがす</div>
+      <div class="search-tag-grid" id="search-tag-grid"></div>
+      <div class="search-empty" id="search-empty" style="display:none;">まだタグがないよ</div>
+    </div>
+  </div>
+
+  <!-- Calendar Modal -->
+  <div class="modal-overlay" id="calendar-modal">
+    <div class="modal-sheet">
+      <button class="close-x" id="close-calendar-modal">✕</button>
+      <div class="modal-title">📅 ふりかえる</div>
+      <div class="calendar-strip" style="margin:0;">
+        <div class="cal-header">
+          <div class="cal-nav"><button id="cal-prev">◀</button></div>
+          <div class="cal-title" id="cal-title">-</div>
+          <div class="cal-nav"><button id="cal-next">▶</button></div>
+        </div>
+        <div class="cal-grid" id="cal-grid"></div>
+      </div>
+      <div class="cal-clear" id="cal-clear-btn">絞り込みを解除する</div>
+    </div>
+  </div>
+
+  <!-- Avatar Modal -->
+  <div class="modal-overlay center" id="avatar-modal">
+    <div class="modal-sheet center-sheet">
+      <button class="close-x" id="close-avatar-modal">✕</button>
+      <div class="modal-title">プロフィール画像</div>
+      <div class="photo-drop" id="avatar-photo-drop" style="aspect-ratio:1; max-width:200px; margin:0 auto 16px; border-radius: 20px;">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="14" rx="2" stroke="#55648f" stroke-width="1.6"/><circle cx="8.5" cy="11" r="1.5" fill="#55648f"/><path d="M3 17L8 13L12 16L16 12L21 17" stroke="#55648f" stroke-width="1.6"/></svg>
+        <span>タップしてえらぶ</span>
+        <input type="file" accept="image/*" id="avatar-photo-input">
+      </div>
+      <button class="btn-primary" id="avatar-save">ほぞんする</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  window.kaniStorageReady = false;
+  window.addEventListener('error', function (e) {
+    if (e && e.message && /firebasejs|kani-memory/i.test(String(e.filename || '') + String(e.message || ''))) {
+      console.error('Firebase読み込みでエラーが発生しました:', e.message);
+    }
+  });
+</script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import {
+    getFirestore, doc, getDoc, setDoc, collection, getDocs, query, where
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDr61RRs3pKFAEFnn7S6agUnftUIndNtlg",
+    authDomain: "kani-memory.firebaseapp.com",
+    projectId: "kani-memory",
+    storageBucket: "kani-memory.firebasestorage.app",
+    messagingSenderId: "94607822703",
+    appId: "1:94607822703:web:15a76dc4d62fd73a9ea29a"
+  };
+
+  const fbApp = initializeApp(firebaseConfig);
+  const db = getFirestore(fbApp);
+
+  // Expose a storage-like API so the rest of the app's logic doesn't need to change.
+  // Firestore doesn't allow "/" in document IDs, so we sanitize keys before use.
+  function sanitizeDocId(key) {
+    return key.replace(/[\/]/g, '__SLASH__');
+  }
+
+  window.kaniStorage = {
+    async get(key) {
+      const ref = doc(db, 'kani_data', sanitizeDocId(key));
+      const snap = await getDoc(ref);
+      if (!snap.exists()) return null;
+      return { key, value: snap.data().value, shared: true };
+    },
+    async set(key, value) {
+      const ref = doc(db, 'kani_data', sanitizeDocId(key));
+      await setDoc(ref, { value: value, updatedAt: Date.now() });
+      return { key, value, shared: true };
+    },
+    async list(prefix) {
+      const colRef = collection(db, 'kani_data');
+      const snap = await getDocs(colRef);
+      const keys = [];
+      snap.forEach(d => {
+        const originalKey = d.id.replace(/__SLASH__/g, '/');
+        if (!prefix || originalKey.startsWith(prefix)) keys.push(originalKey);
+      });
+      return { keys, shared: true };
+    }
+  };
+  window.kaniStorageReady = true;
+  window.dispatchEvent(new Event('kani-storage-ready'));
+</script>
+<script>
+function startKaniMemoryApp() {
+  const STORAGE_ROOM_KEY = 'kanimemory_room_v1';
+  const STORAGE_NAME_KEY = 'kanimemory_name_v1';
+
+  let room = localStorage.getItem(STORAGE_ROOM_KEY) || '';
+  let myName = localStorage.getItem(STORAGE_NAME_KEY) || '';
+  let participants = [];
+  let profiles = {}; // name -> { avatar: dataUrl }
+  let entries = [];
+  let commentsByEntry = {};
+  let favorites = []; // entry ids favorited by myName
+  let activeTag = '__all__';
+  let selectedDateFilter = null; // 'YYYY-M-D' or null
+  let pendingPhotoDataUrl = null;
+  let mentionChips = [];
+  let tagChips = [];
+  let currentProfileTarget = null; // name being viewed in profile
+  let currentSubtab = 'posts';
+  let calMonth = new Date();
+
+  // ---------- pixel crab rendering ----------
+  const CRAB_PATTERN = [
+    "0,2,0,0,0,0,0,2,0",
+    "2,1,2,0,0,0,2,1,2",
+    "0,2,1,1,1,1,1,2,0",
+    "2,1,1,3,1,3,1,1,2",
+    "0,1,1,1,1,1,1,1,0",
+    "0,0,2,1,1,1,2,0,0",
+    "0,2,0,0,0,0,0,2,0"
+  ];
+  function renderCrab(el) {
+    if (!el) return;
+    el.innerHTML = '';
+    CRAB_PATTERN.forEach(row => {
+      row.split(',').forEach(v => {
+        const span = document.createElement('span');
+        if (v === '1') span.className = 'c1';
+        else if (v === '2') span.className = 'c2';
+        else if (v === '3') span.className = 'eye';
+        el.appendChild(span);
+      });
+    });
+  }
+  ['gate-crab','name-crab','logo-crab'].forEach(id => renderCrab(document.getElementById(id)));
+
+  function k(base) { return room + ':' + base; }
+
+  function waitForKaniStorage() {
+    if (window.kaniStorageReady && window.kaniStorage) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      const startedAt = Date.now();
+      const check = () => {
+        if (window.kaniStorageReady && window.kaniStorage) { resolve(); return; }
+        if (Date.now() - startedAt > 10000) { reject(new Error('データベースへの接続に時間がかかっています。通信環境を確認してもう一度お試しください。')); return; }
+        setTimeout(check, 100);
+      };
+      check();
+    });
+  }
+
+  async function safeGet(key) {
+    try {
+      await waitForKaniStorage();
+      const r = await window.kaniStorage.get(key);
+      return r ? r.value : null;
+    } catch (e) {
+      console.warn('get failed (may just mean key does not exist yet):', key, e && e.message ? e.message : e);
+      return null;
+    }
+  }
+  async function safeSet(key, value, retries) {
+    retries = retries === undefined ? 2 : retries;
+    try {
+      await waitForKaniStorage();
+      const result = await window.kaniStorage.set(key, value);
+      if (!result) {
+        console.warn('storage.set returned falsy for key:', key);
+      }
+      return result;
+    } catch (e) {
+      console.warn('set attempt failed for key:', key, 'retries left:', retries, e && e.message ? e.message : e);
+      if (retries > 0) {
+        await new Promise(r => setTimeout(r, 300 + Math.random() * 300));
+        return safeSet(key, value, retries - 1);
+      }
+      console.error('set permanently failed for key:', key, e);
+      return null;
+    }
+  }
+  async function safeList(prefix) {
+    try {
+      await waitForKaniStorage();
+      const r = await window.kaniStorage.list(prefix);
+      return r ? r.keys : [];
+    }
+    catch (e) { return []; }
+  }
+
+  // ---------- gate flow ----------
+  const gate = document.getElementById('gate');
+  const nameGate = document.getElementById('name-gate');
+  const mainUI = document.getElementById('main-ui');
+  const fabWrap = document.getElementById('fab-wrap');
+
+  document.getElementById('gate-enter').onclick = enterRoom;
+  document.getElementById('gate-passcode').addEventListener('keydown', e => { if (e.key === 'Enter') enterRoom(); });
+
+  async function enterRoom() {
+    const val = document.getElementById('gate-passcode').value.trim();
+    if (!val) { document.getElementById('gate-error').textContent = '合言葉を入れてね'; return; }
+    room = 'room_' + val;
+    localStorage.setItem(STORAGE_ROOM_KEY, room);
+    if (myName) { await bootMain(); }
+    else { gate.style.display = 'none'; nameGate.style.display = 'flex'; }
+  }
+
+  document.getElementById('name-enter').onclick = submitName;
+  document.getElementById('name-input').addEventListener('keydown', e => { if (e.key === 'Enter') submitName(); });
+
+  async function submitName() {
+    const val = document.getElementById('name-input').value.trim();
+    if (!val) { document.getElementById('name-error').textContent = 'なまえを入れてね'; return; }
+    myName = val;
+    localStorage.setItem(STORAGE_NAME_KEY, myName);
+    nameGate.style.display = 'none';
+    await bootMain();
+  }
+
+  async function registerParticipant(name) {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const list = await safeGet(k('participants'));
+      let arr = [];
+      try { arr = list ? JSON.parse(list) : []; } catch (e) { arr = []; }
+      if (arr.includes(name)) return; // already registered, nothing to do
+      arr.push(name);
+      const result = await safeSet(k('participants'), JSON.stringify(arr));
+      if (result) return; // success
+      await new Promise(r => setTimeout(r, 300 + attempt * 300));
+    }
+    console.warn('参加者の登録に失敗しました（通信環境が不安定な可能性があります）。あとで自動で反映されることがあります。');
+  }
+
+  async function bootMain() {
+    gate.style.display = 'none';
+    nameGate.style.display = 'none';
+    mainUI.style.display = 'block';
+    fabWrap.style.display = 'flex';
+
+    await registerParticipant(myName);
+    await loadParticipants();
+    await loadProfiles();
+    await loadFavorites();
+    await loadEntries();
+    currentProfileTarget = myName;
+    renderProfileHeader();
+    renderProfileParticipants();
+  }
+
+  (async function tryAutoBoot() { if (room && myName) await bootMain(); })();
+
+  // ---------- participants & profiles ----------
+  async function loadParticipants() {
+    const raw = await safeGet(k('participants'));
+    try { participants = raw ? JSON.parse(raw) : []; } catch (e) { participants = []; }
+  }
+
+  async function loadProfiles() {
+    profiles = {};
+    for (const p of participants) {
+      const raw = await safeGet(k('profile:' + p));
+      if (raw) { try { profiles[p] = JSON.parse(raw); } catch (e) {} }
+    }
+  }
+
+  function initials(name) { return name ? name.charAt(0) : '?'; }
+
+  function avatarHtml(name, sizeClass) {
+    const prof = profiles[name];
+    if (prof && prof.avatar) {
+      return `<img src="${prof.avatar}" alt="">`;
+    }
+    return `<span>${escapeHtml(initials(name))}</span>`;
+  }
+
+  // ---------- favorites ----------
+  async function loadFavorites() {
+    const raw = await safeGet(k('favorites:' + myName));
+    try { favorites = raw ? JSON.parse(raw) : []; } catch (e) { favorites = []; }
+  }
+  async function toggleFavorite(entryId) {
+    const idx = favorites.indexOf(entryId);
+    if (idx >= 0) favorites.splice(idx, 1);
+    else favorites.push(entryId);
+    await safeSet(k('favorites:' + myName), JSON.stringify(favorites));
+  }
+
+  // ---------- entries ----------
+  async function loadEntries() {
+    const timeline = document.getElementById('timeline');
+    timeline.innerHTML = '<div class="loading-dots"><span></span><span></span><span></span></div>';
+
+    try {
+      const keys = await safeList(k('entries:'));
+      const loaded = [];
+      for (const key of keys) {
+        const raw = await safeGet(key);
+        if (!raw) continue;
+        try { loaded.push(JSON.parse(raw)); } catch (e) {}
+      }
+      loaded.sort((a, b) => b.createdAt - a.createdAt);
+      entries = loaded;
+
+      buildTagBar();
+      renderTimeline();
+      renderCalendarGrid();
+      if (document.getElementById('view-profile').classList.contains('active')) renderProfileGrid();
+    } catch (e) {
+      timeline.innerHTML = `<div class="empty-state"><p style="color:#c94326; font-weight:bold;">読み込みエラー</p><p style="word-break:break-all; font-size:11px; margin-top:8px;">${escapeHtml(e && e.message ? e.message : String(e))}</p></div>`;
+      console.error('loadEntries failed:', e);
+    }
+  }
+
+  function buildTagBar() {
+    const tagbar = document.getElementById('tagbar');
+    const allTags = new Set();
+    entries.forEach(e => (e.tags || []).forEach(t => allTags.add(t)));
+
+    tagbar.innerHTML = '';
+    const allChip = document.createElement('div');
+    allChip.className = 'tag-chip' + (activeTag === '__all__' ? ' active' : '');
+    allChip.textContent = 'すべて';
+    allChip.onclick = () => { activeTag = '__all__'; buildTagBar(); renderTimeline(); };
+    tagbar.appendChild(allChip);
+
+    [...allTags].sort().forEach(tag => {
+      const chip = document.createElement('div');
+      chip.className = 'tag-chip' + (activeTag === tag ? ' active' : '');
+      chip.textContent = '#' + tag;
+      chip.onclick = () => { activeTag = tag; buildTagBar(); renderTimeline(); };
+      tagbar.appendChild(chip);
+    });
+  }
+
+  function formatDate(ts) {
+    const d = new Date(ts);
+    const now = new Date();
+    const sameYear = d.getFullYear() === now.getFullYear();
+    const y = sameYear ? '' : d.getFullYear() + '/';
+    return `${y}${d.getMonth()+1}/${d.getDate()}`;
+  }
+
+  function dateKey(ts) {
+    const d = new Date(ts);
+    return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
+  }
+
+  function getFilteredEntries(baseList) {
+    let list = baseList;
+    if (activeTag !== '__all__') list = list.filter(e => (e.tags || []).includes(activeTag));
+    if (selectedDateFilter) list = list.filter(e => dateKey(e.createdAt) === selectedDateFilter);
+    return list;
+  }
+
+  function renderTimeline() {
+    const timeline = document.getElementById('timeline');
+    const filtered = getFilteredEntries(entries);
+
+    if (filtered.length === 0) {
+      timeline.innerHTML = `
+        <div class="empty-state">
+          <div class="crab-pixel" id="empty-crab"></div>
+          <p>${selectedDateFilter ? 'この日はまだなにものこってないよ' : 'まだなにものこってないよ<br>右下のボタンから、はじめての1枚をのこそう'}</p>
+        </div>`;
+      renderCrab(document.getElementById('empty-crab'));
+      return;
+    }
+
+    timeline.innerHTML = '';
+    filtered.forEach(entry => timeline.appendChild(buildCard(entry)));
+    wireCardEvents(timeline);
+  }
+
+  function buildCard(entry) {
+    const card = document.createElement('div');
+    card.className = 'card';
+    const isFav = favorites.includes(entry.id);
+    const mentionsHtml = (entry.mentions || []).map(m => `<span class="mention-chip">@${escapeHtml(m)}</span>`).join('');
+    const tagsHtml = (entry.tags || []).map(t => `<span class="card-tag-el">#${escapeHtml(t)}</span>`).join('');
+
+    card.innerHTML = `
+      <div class="card-photo-wrap">
+        <img src="${entry.photo}" loading="lazy" alt="">
+        <div class="card-date-tag">${formatDate(entry.createdAt)}</div>
+        <button class="fav-btn" data-id="${entry.id}">
+          <svg viewBox="0 0 24 24" fill="${isFav ? '#ff6b52' : 'none'}"><path d="M12 20s-7-4.5-9.5-9C1 7.5 3 4 6.5 4C8.7 4 10.7 5.3 12 7C13.3 5.3 15.3 4 17.5 4C21 4 23 7.5 21.5 11C19 15.5 12 20 12 20Z" stroke="${isFav ? '#ff6b52' : '#8d9dc9'}" stroke-width="1.8"/></svg>
+        </button>
+      </div>
+      <div class="card-body">
+        <div class="card-author-row">
+          <div class="avatar-tile">${avatarHtml(entry.author)}</div>
+          <div class="card-author">${escapeHtml(entry.author)}</div>
+        </div>
+        <div class="card-caption">${escapeHtml(entry.caption)}</div>
+        ${mentionsHtml ? `<div class="card-mentions">${mentionsHtml}</div>` : ''}
+        ${tagsHtml ? `<div class="card-tags">${tagsHtml}</div>` : ''}
+        <div class="card-footer">
+          <button class="comment-toggle" data-id="${entry.id}">💬 コメント <span class="comment-count">${(commentsByEntry[entry.id]||[]).length || ''}</span></button>
+        </div>
+        <div class="comment-section" id="comments-${entry.id}">
+          <div class="comment-list" id="comment-list-${entry.id}"></div>
+          <div class="comment-input-row">
+            <input type="text" placeholder="コメントする" maxlength="200" data-entry="${entry.id}" class="comment-input">
+            <button data-entry="${entry.id}" class="comment-send">送る</button>
+          </div>
+        </div>
+      </div>
+    `;
+    return card;
+  }
+
+  function wireCardEvents(container) {
+    container.querySelectorAll('.comment-toggle').forEach(btn => { btn.onclick = () => toggleComments(btn.dataset.id); });
+    container.querySelectorAll('.comment-send').forEach(btn => { btn.onclick = () => sendComment(btn.dataset.entry); });
+    container.querySelectorAll('.comment-input').forEach(inp => {
+      inp.addEventListener('keydown', e => { if (e.key === 'Enter') sendComment(inp.dataset.entry); });
+    });
+    container.querySelectorAll('.fav-btn').forEach(btn => {
+      btn.onclick = async () => {
+        await toggleFavorite(btn.dataset.id);
+        const isFav = favorites.includes(btn.dataset.id);
+        const svg = btn.querySelector('svg');
+        svg.setAttribute('fill', isFav ? '#ff6b52' : 'none');
+        svg.querySelector('path').setAttribute('stroke', isFav ? '#ff6b52' : '#8d9dc9');
+        if (document.getElementById('view-profile').classList.contains('active') && currentSubtab === 'favorites') {
+          renderProfileGrid();
+        }
+      };
+    });
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str == null ? '' : String(str);
+    return div.innerHTML;
+  }
+
+  async function toggleComments(entryId) {
+    const section = document.getElementById('comments-' + entryId);
+    const isOpen = section.classList.contains('open');
+    if (!isOpen) await loadComments(entryId);
+    section.classList.toggle('open');
+  }
+
+  async function loadComments(entryId) {
+    const keys = await safeList(k('comments:' + entryId + ':'));
+    const loaded = [];
+    for (const key of keys) {
+      const raw = await safeGet(key);
+      if (!raw) continue;
+      try { loaded.push(JSON.parse(raw)); } catch (e) {}
+    }
+    loaded.sort((a, b) => a.createdAt - b.createdAt);
+    commentsByEntry[entryId] = loaded;
+    const list = document.getElementById('comment-list-' + entryId);
+    if (list) {
+      list.innerHTML = loaded.map(c => `<div class="comment-item"><b>${escapeHtml(c.author)}</b> ${escapeHtml(c.text)}</div>`).join('') ||
+        `<div class="comment-item" style="color:var(--ink-dimmer);">まだコメントないよ</div>`;
+    }
+  }
+
+  async function sendComment(entryId) {
+    const input = document.querySelector(`.comment-input[data-entry="${entryId}"]`);
+    const text = input.value.trim();
+    if (!text) return;
+    const comment = { id: 'c_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7), author: myName, text: text, createdAt: Date.now() };
+    input.value = '';
+    await safeSet(k('comments:' + entryId + ':' + comment.id), JSON.stringify(comment));
+    await loadComments(entryId);
+    const countEl = document.querySelectorAll(`.comment-toggle[data-id="${entryId}"] .comment-count`);
+    countEl.forEach(el => el.textContent = (commentsByEntry[entryId] || []).length);
+  }
+
+  // ---------- tab switching ----------
+  document.querySelectorAll('.tab-btn').forEach(tab => {
+    tab.onclick = () => {
+      document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const target = tab.dataset.view;
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      document.getElementById('view-' + target).classList.add('active');
+      fabWrap.style.display = target === 'timeline' ? 'flex' : 'none';
+      if (target === 'profile') { renderProfileHeader(); renderProfileGrid(); }
+    };
+  });
+
+  // ---------- profile view ----------
+  function renderProfileHeader() {
+    const name = currentProfileTarget || myName;
+    document.getElementById('profile-name-display').textContent = name;
+    document.getElementById('profile-sub').textContent = name === myName ? 'じぶんのきろく' : `${name}のきろく`;
+    const avatarBig = document.getElementById('profile-avatar-big');
+    const prof = profiles[name];
+    avatarBig.innerHTML = prof && prof.avatar
+      ? `<img src="${prof.avatar}" alt="">`
+      : `<span>${escapeHtml(initials(name))}</span>`;
+    const editBtn = document.getElementById('profile-avatar-edit');
+    if (name === myName) {
+      const btn = document.createElement('div');
+      btn.className = 'profile-avatar-edit';
+      btn.id = 'profile-avatar-edit';
+      btn.textContent = '✎';
+      avatarBig.appendChild(btn);
+      btn.onclick = () => document.getElementById('avatar-modal').classList.add('open');
+    }
+  }
+
+  function renderProfileParticipants() {
+    const wrap = document.getElementById('profile-participants');
+    wrap.innerHTML = '';
+    participants.forEach(p => {
+      const chip = document.createElement('div');
+      chip.className = 'participant-chip' + (p === currentProfileTarget ? ' active' : '');
+      chip.innerHTML = `<div class="mini-avatar">${avatarHtml(p)}</div><span class="pname">${escapeHtml(p)}</span>`;
+      chip.onclick = () => {
+        currentProfileTarget = p;
+        renderProfileParticipants();
+        renderProfileHeader();
+        currentSubtab = 'posts';
+        document.querySelectorAll('.subtab-btn').forEach(s => s.classList.remove('active'));
+        document.querySelector('.subtab-btn[data-sub="posts"]').classList.add('active');
+        renderProfileGrid();
+      };
+      wrap.appendChild(chip);
+    });
+  }
+
+  document.querySelectorAll('.subtab-btn').forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll('.subtab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentSubtab = btn.dataset.sub;
+      renderProfileGrid();
+    };
+  });
+
+  function renderProfileGrid() {
+    const grid = document.getElementById('profile-grid');
+    const target = currentProfileTarget || myName;
+    let list;
+    if (currentSubtab === 'favorites') {
+      if (target !== myName) {
+        grid.innerHTML = `<div class="search-empty" style="grid-column:1/-1;">お気に入りは自分のものだけ見られるよ</div>`;
+        return;
+      }
+      list = entries.filter(e => favorites.includes(e.id));
+    } else {
+      list = entries.filter(e => e.author === target);
+    }
+    if (list.length === 0) {
+      grid.innerHTML = `<div class="search-empty" style="grid-column:1/-1;">まだないよ</div>`;
+      return;
+    }
+    grid.innerHTML = '';
+    list.forEach(entry => {
+      const tile = document.createElement('div');
+      tile.className = 'grid-photo';
+      const isFav = favorites.includes(entry.id);
+      tile.innerHTML = `<img src="${entry.photo}" loading="lazy" alt="">
+        ${isFav ? `<div class="grid-fav"><svg viewBox="0 0 24 24" fill="#ff6b52"><path d="M12 20s-7-4.5-9.5-9C1 7.5 3 4 6.5 4C8.7 4 10.7 5.3 12 7C13.3 5.3 15.3 4 17.5 4C21 4 23 7.5 21.5 11C19 15.5 12 20 12 20Z"/></svg></div>` : ''}`;
+      tile.onclick = () => {
+        activeTag = '__all__';
+        selectedDateFilter = null;
+        document.querySelector('.tab-btn[data-view="timeline"]').click();
+        buildTagBar();
+        const timeline = document.getElementById('timeline');
+        timeline.innerHTML = '';
+        timeline.appendChild(buildCard(entry));
+        wireCardEvents(timeline);
+      };
+      grid.appendChild(tile);
+    });
+  }
+
+  // ---------- avatar modal ----------
+  const avatarModal = document.getElementById('avatar-modal');
+  document.getElementById('close-avatar-modal').onclick = () => avatarModal.classList.remove('open');
+  avatarModal.addEventListener('click', e => { if (e.target === avatarModal) avatarModal.classList.remove('open'); });
+
+  let pendingAvatarDataUrl = null;
+  const avatarInput = document.getElementById('avatar-photo-input');
+  const avatarDrop = document.getElementById('avatar-photo-drop');
+  avatarDrop.onclick = () => avatarInput.click();
+  avatarInput.onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const size = 400;
+        const minDim = Math.min(img.width, img.height);
+        const sx = (img.width - minDim) / 2, sy = (img.height - minDim) / 2;
+        canvas.width = size; canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, sx, sy, minDim, minDim, 0, 0, size, size);
+        pendingAvatarDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        avatarDrop.innerHTML = `<img src="${pendingAvatarDataUrl}" alt="">`;
+      };
+      img.src = evt.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  document.getElementById('avatar-save').onclick = async () => {
+    if (!pendingAvatarDataUrl) { avatarModal.classList.remove('open'); return; }
+    profiles[myName] = { avatar: pendingAvatarDataUrl };
+    await safeSet(k('profile:' + myName), JSON.stringify(profiles[myName]));
+    avatarModal.classList.remove('open');
+    renderProfileHeader();
+    renderProfileParticipants();
+    renderTimeline();
+  };
+
+  // ---------- search modal ----------
+  const searchModal = document.getElementById('search-modal');
+  document.getElementById('open-search').onclick = () => { buildSearchTagGrid(); searchModal.classList.add('open'); };
+  document.getElementById('close-search-modal').onclick = () => searchModal.classList.remove('open');
+  searchModal.addEventListener('click', e => { if (e.target === searchModal) searchModal.classList.remove('open'); });
+
+  function buildSearchTagGrid() {
+    const grid = document.getElementById('search-tag-grid');
+    const emptyMsg = document.getElementById('search-empty');
+    const allTags = new Set();
+    entries.forEach(e => (e.tags || []).forEach(t => allTags.add(t)));
+    if (allTags.size === 0) { grid.innerHTML = ''; emptyMsg.style.display = 'block'; return; }
+    emptyMsg.style.display = 'none';
+    grid.innerHTML = '';
+    [...allTags].sort().forEach(tag => {
+      const item = document.createElement('div');
+      item.className = 'search-tag-item' + (activeTag === tag ? ' selected' : '');
+      item.textContent = '#' + tag;
+      item.onclick = () => {
+        activeTag = activeTag === tag ? '__all__' : tag;
+        buildSearchTagGrid();
+        buildTagBar();
+        renderTimeline();
+        if (document.getElementById('view-timeline').classList.contains('active') === false) {
+          document.querySelector('.tab-btn[data-view="timeline"]').click();
+        }
+      };
+      grid.appendChild(item);
+    });
+  }
+
+  // ---------- calendar modal ----------
+  const calendarModal = document.getElementById('calendar-modal');
+  document.getElementById('open-calendar').onclick = () => { calMonth = new Date(); renderCalendarGrid(); calendarModal.classList.add('open'); };
+  document.getElementById('close-calendar-modal').onclick = () => calendarModal.classList.remove('open');
+  calendarModal.addEventListener('click', e => { if (e.target === calendarModal) calendarModal.classList.remove('open'); });
+  document.getElementById('cal-prev').onclick = () => { calMonth.setMonth(calMonth.getMonth() - 1); renderCalendarGrid(); };
+  document.getElementById('cal-next').onclick = () => { calMonth.setMonth(calMonth.getMonth() + 1); renderCalendarGrid(); };
+  document.getElementById('cal-clear-btn').onclick = () => {
+    selectedDateFilter = null;
+    renderCalendarGrid();
+    renderTimeline();
+    document.querySelector('.tab-btn[data-view="timeline"]').click();
+    calendarModal.classList.remove('open');
+  };
+
+  function renderCalendarGrid() {
+    const grid = document.getElementById('cal-grid');
+    const titleEl = document.getElementById('cal-title');
+    if (!grid) return;
+    const y = calMonth.getFullYear(), m = calMonth.getMonth();
+    titleEl.textContent = `${y}年 ${m+1}月`;
+
+    const entryDates = new Set(entries.map(e => dateKey(e.createdAt)));
+    const firstDay = new Date(y, m, 1).getDay();
+    const daysInMonth = new Date(y, m + 1, 0).getDate();
+
+    grid.innerHTML = '';
+    ['日','月','火','水','木','金','土'].forEach(d => {
+      const el = document.createElement('div');
+      el.className = 'cal-dow';
+      el.textContent = d;
+      grid.appendChild(el);
+    });
+    for (let i = 0; i < firstDay; i++) {
+      const el = document.createElement('div');
+      el.className = 'cal-day empty';
+      grid.appendChild(el);
+    }
+    for (let d = 1; d <= daysInMonth; d++) {
+      const key = `${y}-${m+1}-${d}`;
+      const el = document.createElement('div');
+      el.className = 'cal-day' + (entryDates.has(key) ? ' has-entry' : '') + (selectedDateFilter === key ? ' selected' : '');
+      el.textContent = d;
+      if (entryDates.has(key)) {
+        el.onclick = () => {
+          selectedDateFilter = selectedDateFilter === key ? null : key;
+          renderCalendarGrid();
+          renderTimeline();
+          document.querySelector('.tab-btn[data-view="timeline"]').click();
+          calendarModal.classList.remove('open');
+        };
+      }
+      grid.appendChild(el);
+    }
+  }
+
+  // ---------- new post modal ----------
+  const postModal = document.getElementById('post-modal');
+  document.getElementById('open-post-modal').onclick = () => { resetPostForm(); postModal.classList.add('open'); };
+  document.getElementById('close-post-modal').onclick = () => postModal.classList.remove('open');
+  postModal.addEventListener('click', e => { if (e.target === postModal) postModal.classList.remove('open'); });
+
+  function resetPostForm() {
+    pendingPhotoDataUrl = null;
+    mentionChips = [];
+    tagChips = [];
+    document.getElementById('caption-input').value = '';
+    document.getElementById('photo-drop').innerHTML = `
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="14" rx="2" stroke="#55648f" stroke-width="1.6"/><circle cx="8.5" cy="11" r="1.5" fill="#55648f"/><path d="M3 17L8 13L12 16L16 12L21 17" stroke="#55648f" stroke-width="1.6"/></svg>
+      <span>タップしてえらぶ</span>
+      <input type="file" accept="image/*" id="photo-input">
+    `;
+    wirePhotoInput();
+    renderMentionChips();
+    renderTagChips();
+    renderMentionSuggestions();
+    updateSubmitState();
+  }
+
+  function wirePhotoInput() {
+    const input = document.getElementById('photo-input');
+    const drop = document.getElementById('photo-drop');
+    drop.onclick = () => input.click();
+    input.onchange = handlePhotoSelect;
+  }
+
+  let rawUploadedImageSrc = null;
+  function handlePhotoSelect(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function (evt) {
+      rawUploadedImageSrc = evt.target.result;
+      openCropper(rawUploadedImageSrc);
+    };
+    reader.readAsDataURL(file);
+  }
+  wirePhotoInput();
+
+  document.getElementById('caption-input').addEventListener('input', updateSubmitState);
+  function updateSubmitState() {
+    const caption = document.getElementById('caption-input').value.trim();
+    document.getElementById('submit-post').disabled = !(pendingPhotoDataUrl && caption);
+  }
+
+  // ---------- cropper ----------
+  const cropModal = document.getElementById('crop-modal');
+  const cropStage = document.getElementById('crop-stage');
+  const cropImage = document.getElementById('crop-image');
+  let cropState = { img: null, scale: 1, minScale: 1, x: 0, y: 0, ratio: 1, naturalW: 0, naturalH: 0 };
+  let dragState = null;
+  let pinchState = null;
+
+  function openCropper(src) {
+    const img = new Image();
+    img.onload = () => {
+      cropState.img = img;
+      cropState.naturalW = img.width;
+      cropState.naturalH = img.height;
+      setCropRatio(1, true);
+      cropModal.classList.add('open');
+    };
+    img.src = src;
+    cropImage.src = src;
+  }
+
+  function stageSize() {
+    const rect = cropStage.getBoundingClientRect();
+    return { w: rect.width, h: rect.height };
+  }
+
+  function setCropRatio(ratio, isInit) {
+    cropState.ratio = ratio;
+    document.querySelectorAll('.crop-aspect-btn').forEach(b => b.classList.toggle('active', parseFloat(b.dataset.ratio) === ratio));
+    const stageW = 320; // stage is square container; we simulate viewport as square, crop area within
+    // Use square stage always for simplicity; ratio affects final export crop shape only
+    fitImageToStage(isInit);
+  }
+
+  function fitImageToStage() {
+    const { w: sw, h: sh } = stageSizeFallback();
+    const iw = cropState.naturalW, ih = cropState.naturalH;
+    const scaleToCover = Math.max(sw / iw, sh / ih);
+    cropState.minScale = scaleToCover;
+    cropState.scale = scaleToCover;
+    cropState.x = (sw - iw * cropState.scale) / 2;
+    cropState.y = (sh - ih * cropState.scale) / 2;
+    applyCropTransform();
+  }
+
+  function stageSizeFallback() {
+    const rect = cropStage.getBoundingClientRect();
+    return { w: rect.width || 320, h: rect.height || 320 };
+  }
+
+  function applyCropTransform() {
+    cropImage.style.width = cropState.naturalW + 'px';
+    cropImage.style.height = cropState.naturalH + 'px';
+    cropImage.style.transform = `translate(${cropState.x}px, ${cropState.y}px) scale(${cropState.scale})`;
+  }
+
+  function clampPan() {
+    const { w: sw, h: sh } = stageSizeFallback();
+    const iw = cropState.naturalW * cropState.scale;
+    const ih = cropState.naturalH * cropState.scale;
+    const minX = Math.min(0, sw - iw);
+    const minY = Math.min(0, sh - ih);
+    cropState.x = Math.max(minX, Math.min(0, cropState.x));
+    cropState.y = Math.max(minY, Math.min(0, cropState.y));
+  }
+
+  cropStage.addEventListener('pointerdown', (e) => {
+    cropStage.setPointerCapture(e.pointerId);
+    dragState = { startX: e.clientX, startY: e.clientY, origX: cropState.x, origY: cropState.y };
+  });
+  cropStage.addEventListener('pointermove', (e) => {
+    if (!dragState) return;
+    cropState.x = dragState.origX + (e.clientX - dragState.startX);
+    cropState.y = dragState.origY + (e.clientY - dragState.startY);
+    clampPan();
+    applyCropTransform();
+  });
+  ['pointerup','pointercancel','pointerleave'].forEach(ev => {
+    cropStage.addEventListener(ev, () => { dragState = null; });
+  });
+
+  // basic pinch-to-zoom via wheel (desktop) and touch distance (mobile)
+  cropStage.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const delta = -e.deltaY * 0.001;
+    zoomBy(delta);
+  }, { passive: false });
+
+  let lastTouchDist = null;
+  cropStage.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 2) {
+      lastTouchDist = touchDist(e.touches);
+    }
+  }, { passive: true });
+  cropStage.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 2) {
+      e.preventDefault();
+      const dist = touchDist(e.touches);
+      if (lastTouchDist) {
+        const delta = (dist - lastTouchDist) * 0.005;
+        zoomBy(delta);
+      }
+      lastTouchDist = dist;
+    }
+  }, { passive: false });
+  cropStage.addEventListener('touchend', (e) => { if (e.touches.length < 2) lastTouchDist = null; });
+
+  function touchDist(touches) {
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.sqrt(dx*dx + dy*dy);
+  }
+
+  function zoomBy(delta) {
+    const newScale = Math.max(cropState.minScale, Math.min(cropState.minScale * 4, cropState.scale * (1 + delta)));
+    const { w: sw, h: sh } = stageSizeFallback();
+    const cx = sw / 2, cy = sh / 2;
+    const ratio = newScale / cropState.scale;
+    cropState.x = cx - (cx - cropState.x) * ratio;
+    cropState.y = cy - (cy - cropState.y) * ratio;
+    cropState.scale = newScale;
+    clampPan();
+    applyCropTransform();
+  }
+
+  document.querySelectorAll('.crop-aspect-btn').forEach(btn => {
+    btn.onclick = () => setCropRatio(parseFloat(btn.dataset.ratio));
+  });
+
+  document.getElementById('crop-cancel').onclick = () => { cropModal.classList.remove('open'); };
+  cropModal.addEventListener('click', e => { if (e.target === cropModal) cropModal.classList.remove('open'); });
+
+  document.getElementById('crop-confirm').onclick = () => {
+    const { w: sw, h: sh } = stageSizeFallback();
+    // The visible stage area represents the crop viewport (square container).
+    // We export based on ratio: for square, export sw x sh; for other ratios we
+    // crop within the square viewport's centered rect matching ratio.
+    let cropW = sw, cropH = sh;
+    if (cropState.ratio < 1) { cropW = sh * cropState.ratio; }
+    else if (cropState.ratio > 1) { cropH = sw / cropState.ratio; }
+    const offsetX = (sw - cropW) / 2;
+    const offsetY = (sh - cropH) / 2;
+
+    const maxOutDim = 1600;
+    let outW = cropW, outH = cropH;
+    const scaleDown = Math.min(1, maxOutDim / Math.max(outW, outH));
+    outW = Math.round(outW * scaleDown);
+    outH = Math.round(outH * scaleDown);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = outW;
+    canvas.height = outH;
+    const ctx = canvas.getContext('2d');
+
+    // source rect in natural image coordinates
+    const srcX = (offsetX - cropState.x) / cropState.scale;
+    const srcY = (offsetY - cropState.y) / cropState.scale;
+    const srcW = cropW / cropState.scale;
+    const srcH = cropH / cropState.scale;
+
+    ctx.drawImage(cropState.img, srcX, srcY, srcW, srcH, 0, 0, outW, outH);
+    pendingPhotoDataUrl = canvas.toDataURL('image/jpeg', 0.82);
+
+    const drop = document.getElementById('photo-drop');
+    drop.innerHTML = `<img src="${pendingPhotoDataUrl}" alt="">`;
+    updateSubmitState();
+    cropModal.classList.remove('open');
+  };
+
+  // ---------- mention chips ----------
+  const mentionInput = document.getElementById('mention-input');
+  mentionInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addMentionFromInput(); }
+    else if (e.key === 'Backspace' && mentionInput.value === '' && mentionChips.length) { mentionChips.pop(); renderMentionChips(); }
+  });
+  function addMentionFromInput() {
+    let val = mentionInput.value.trim().replace(/^@/, '');
+    if (!val) return;
+    if (!mentionChips.includes(val)) mentionChips.push(val);
+    mentionInput.value = '';
+    renderMentionChips();
+    renderMentionSuggestions();
+  }
+  function renderMentionChips() {
+    const wrap = document.getElementById('mention-wrap');
+    wrap.querySelectorAll('.removable-chip').forEach(c => c.remove());
+    mentionChips.forEach((m, idx) => {
+      const chip = document.createElement('span');
+      chip.className = 'removable-chip mention';
+      chip.innerHTML = `@${escapeHtml(m)} <button data-idx="${idx}">✕</button>`;
+      chip.querySelector('button').onclick = () => { mentionChips.splice(idx, 1); renderMentionChips(); renderMentionSuggestions(); };
+      wrap.insertBefore(chip, mentionInput);
+    });
+  }
+  function renderMentionSuggestions() {
+    const box = document.getElementById('mention-suggestions');
+    const candidates = participants.filter(p => p !== myName && !mentionChips.includes(p));
+    if (candidates.length === 0) { box.innerHTML = ''; return; }
+    box.innerHTML = candidates.map(p => `<span class="suggestion-chip" data-name="${escapeHtml(p)}">@${escapeHtml(p)}</span>`).join('');
+    box.querySelectorAll('.suggestion-chip').forEach(el => {
+      el.onclick = () => {
+        const name = el.dataset.name;
+        if (!mentionChips.includes(name)) mentionChips.push(name);
+        renderMentionChips();
+        renderMentionSuggestions();
+      };
+    });
+  }
+
+  // ---------- tag chips ----------
+  const tagInput = document.getElementById('tag-input');
+  tagInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTagFromInput(); }
+    else if (e.key === 'Backspace' && tagInput.value === '' && tagChips.length) { tagChips.pop(); renderTagChips(); }
+  });
+  function addTagFromInput() {
+    let val = tagInput.value.trim().replace(/^#/, '');
+    if (!val) return;
+    if (!tagChips.includes(val)) tagChips.push(val);
+    tagInput.value = '';
+    renderTagChips();
+  }
+  function renderTagChips() {
+    const wrap = document.getElementById('tag-wrap');
+    wrap.querySelectorAll('.removable-chip').forEach(c => c.remove());
+    tagChips.forEach((t, idx) => {
+      const chip = document.createElement('span');
+      chip.className = 'removable-chip tag';
+      chip.innerHTML = `#${escapeHtml(t)} <button data-idx="${idx}">✕</button>`;
+      chip.querySelector('button').onclick = () => { tagChips.splice(idx, 1); renderTagChips(); };
+      wrap.insertBefore(chip, tagInput);
+    });
+  }
+
+  document.getElementById('submit-post').onclick = async function () {
+    const btn = this;
+    if (btn.disabled) return;
+    if (mentionInput.value.trim()) addMentionFromInput();
+    if (tagInput.value.trim()) addTagFromInput();
+
+    const caption = document.getElementById('caption-input').value.trim();
+    if (!pendingPhotoDataUrl || !caption) return;
+
+    btn.disabled = true;
+    btn.textContent = 'のこしてる...';
+
+    const entry = {
+      id: 'e_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+      author: myName,
+      caption: caption,
+      photo: pendingPhotoDataUrl,
+      mentions: mentionChips.slice(),
+      tags: tagChips.slice(),
+      createdAt: Date.now()
+    };
+
+    const result = await safeSet(k('entries:' + entry.id), JSON.stringify(entry));
+    btn.textContent = 'のこす';
+    btn.disabled = false;
+
+    if (result) {
+      postModal.classList.remove('open');
+      await loadEntries();
+    } else {
+      alert('保存に失敗しました。写真サイズが大きすぎるかもしれません。');
+    }
+  };
+
+}
+
+startKaniMemoryApp();
+</script>
+</body>
+</html>
